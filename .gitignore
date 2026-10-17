@@ -1,0 +1,70 @@
+# Allowlist. Everything at the top level is ignored unless named below.
+# This keeps the Drive copy, past years, student work and grades out of git,
+# even if a new folder appears at the root. To publish a new top-level item,
+# add it here on purpose.
+/*
+!/.gitignore
+!/.github/
+!/README.md
+!/CLAUDE.md
+!/CONTRIBUTING.md
+!/LICENSE
+!/LICENSE-CC-BY-4.0
+!/NOTICE
+!/Makefile
+!/docs/
+!/common/
+!/lectures/
+!/labs/
+!/tools/
+!/index.html
+!/project/
+!/env/
+!/syllabus/
+
+# Never commit these anywhere in the tree.
+*.xlsx
+*.xlsm
+*.xls
+*.csv.grades
+*Grades*
+*grades*
+*GradesExport*
+*.partial
+*.mp4
+*.mov
+*.zip
+*.pt
+*.iso
+
+# LaTeX build products
+*.aux
+*.log
+*.out
+*.nav
+*.snm
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.vrb
+*.bbl
+*.blg
+build/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+
+# Built PDFs (CI builds them; release assets carry them)
+*.pdf
+*-luamml-mathml.html
+
+# Build tools
+tools/.venv/
+
+# common/brand/ holds the WMU logo: published by Zach's choice (2026-10-15),
+# but a trademark, not covered by the course licenses (see NOTICE).
+

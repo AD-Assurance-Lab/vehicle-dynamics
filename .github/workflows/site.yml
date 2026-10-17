@@ -1,0 +1,94 @@
+# Build every handout PDF, check accessibility and links, then publish the site.
+# Publishing happens only for main in the public repository.
+name: site
+
+on:
+  push:
+    branches: [main, draft]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python tools
+        run: |
+          python -m venv tools/.venv
+          tools/.venv/bin/pip install -r tools/requirements.txt
+
+      - name: Install veraPDF 1.30.3
+        run: |
+          curl -sSL -o /tmp/vp.zip https://software.verapdf.org/releases/1.30/verapdf-greenfield-1.30.3-installer.zip
+          echo "b512bf24945503a33fc10738ecffc1f2dccaaf8593a448e94ee9ac86a9559a59  /tmp/vp.zip" | sha256sum -c
+          unzip -q /tmp/vp.zip -d /tmp/vp
+          cat > /tmp/auto.xml <<EOF
+          <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+          <AutomatedInstallation langpack="eng">
+          <com.izforge.izpack.panels.htmlhello.HTMLHelloPanel id="welcome"/>
+          <com.izforge.izpack.panels.target.TargetPanel id="install_dir"><installpath>$HOME/verapdf</installpath></com.izforge.izpack.panels.target.TargetPanel>
+          <com.izforge.izpack.panels.packs.PacksPanel id="sdk_pack_select">
+          <pack index="0" name="veraPDF GUI" selected="true"/>
+          <pack index="1" name="veraPDF Mac and *nix Scripts" selected="true"/>
+          <pack index="2" name="veraPDF Validation model" selected="false"/>
+          <pack index="3" name="veraPDF Documentation" selected="false"/>
+          <pack index="4" name="veraPDF Sample Plugins" selected="false"/>
+          </com.izforge.izpack.panels.packs.PacksPanel>
+          <com.izforge.izpack.panels.install.InstallPanel id="install"/>
+          <com.izforge.izpack.panels.finish.FinishPanel id="finish"/>
+          </AutomatedInstallation>
+          EOF
+          java -jar /tmp/vp/verapdf-greenfield-1.30.3/verapdf-izpack-installer-1.30.3.jar /tmp/auto.xml
+          echo "VERAPDF=$HOME/verapdf/verapdf" >> "$GITHUB_ENV"
+
+      - name: Build handout PDFs (must pass PDF/UA)
+        run: |
+          files=$(find lectures labs -name '*.html' -not -path '*/figures/*' 2>/dev/null | sort)
+          if [ -n "$files" ]; then tools/.venv/bin/python tools/build_pdf.py $files; else echo "no lectures or labs yet"; fi
+
+      - name: Check links
+        run: python3 tools/check_links.py .
+
+      - name: Assemble site
+        run: |
+          mkdir _site
+          git ls-files | grep -v -E '^(\.github|tools|env)/|^(CLAUDE|CONTRIBUTING)\.md$' | while read -r f; do
+            mkdir -p "_site/$(dirname "$f")"; cp "$f" "_site/$f"; done
+          find lectures labs syllabus -name '*.pdf' 2>/dev/null | while read -r f; do cp "$f" "_site/$f"; done
+          base="https://ad-assurance-lab.github.io/vehicle-dynamics/"
+          { echo '<?xml version="1.0" encoding="UTF-8"?>'
+            echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            (cd _site && find . -name '*.html' | sed 's#^\./##' | sort) | while read -r f; do
+              echo "  <url><loc>${base}${f%index.html}</loc></url>"; done
+            echo '</urlset>'; } > _site/sitemap.xml
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.repository == 'AD-Assurance-Lab/vehicle-dynamics' && github.ref == 'refs/heads/main'
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    if: github.repository == 'AD-Assurance-Lab/vehicle-dynamics' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

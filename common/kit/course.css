@@ -1,0 +1,129 @@
+/* ME 4650/5950 course kit: one stylesheet for every lecture.
+   Three views of the same HTML file:
+   - present: one 16:9 slide at a time, scaled to the screen (course.js)
+   - read:    all slides as one scrolling page of notes (accessible view)
+   - print:   the read view on letter paper, plus blank workspaces (the handout PDF)
+   Copyright 2026 AD Assurance Lab. Licensed under the Apache License, Version 2.0. */
+
+@import url("vendor/Temml-Latin-Modern.css");
+
+@font-face { font-family: "Source Sans 3"; font-weight: 400; font-style: normal; src: url("fonts/source-sans-3-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Source Sans 3"; font-weight: 400; font-style: italic; src: url("fonts/source-sans-3-latin-400-italic.woff2") format("woff2"); }
+@font-face { font-family: "Source Sans 3"; font-weight: 600; font-style: normal; src: url("fonts/source-sans-3-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Source Sans 3"; font-weight: 700; font-style: normal; src: url("fonts/source-sans-3-latin-700-normal.woff2") format("woff2"); }
+
+:root {
+  --brown: #532E1F;
+  --gold: #F1C500;
+  --gold-light: #FCEFB4;
+  --ink: #1F1A17;
+  --muted: #5E5650;        /* 7:1 on white */
+  --paper: #FFFFFF;
+  --font: "Source Sans 3", "Liberation Sans", Arial, Helvetica, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { color: var(--ink); background: var(--paper); font-family: var(--font); }
+body { margin: 0; line-height: 1.4; }
+h1, h2, h3 { color: var(--brown); line-height: 1.15; margin: 0 0 .4em; }
+h2 { border-bottom: 5px solid var(--gold); padding-bottom: .12em; }
+a { color: var(--brown); }
+strong { font-weight: 700; }
+math { font-family: "Latin Modern Math", math; font-size: 1.12em; }
+math[display="block"] { margin: .5em 0; }
+table { border-collapse: collapse; margin: .4em 0; }
+th, td { text-align: left; padding: .25em .7em; border-bottom: 1px solid #C9C2BD; vertical-align: top; }
+th { color: var(--brown); border-bottom: 2px solid var(--brown); }
+caption { text-align: left; color: var(--muted); padding-bottom: .2em; }
+figure { margin: .4em 0; }
+figure img, figure svg { max-width: 100%; height: auto; display: block; }
+figcaption { color: var(--muted); font-size: .8em; margin-top: .2em; }
+.muted { color: var(--muted); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.cols { display: grid; grid-template-columns: 3fr 2fr; gap: 1.2em; align-items: start; }
+.cols.even { grid-template-columns: 1fr 1fr; }
+
+/* Example slides: a label and a colored bar so students know whose turn it is */
+.example-label { display: inline-block; font-size: .62em; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; padding: .15em .6em; border-radius: .3em; margin-bottom: .35em; }
+.group-example .example-label { background: var(--gold); color: var(--brown); }
+.worked-example .example-label { background: var(--brown); color: #fff; }
+.group-example { border-left: 18px solid var(--gold); }
+.worked-example { border-left: 18px solid var(--brown); }
+
+/* Only in one view */
+.workspace { display: none; }
+.print-only { display: none; }
+.notes { display: none; }
+
+/* Buttons and controls (screen) */
+button, select, input { font: inherit; accent-color: var(--brown); }
+.btn { background: var(--brown); color: #fff; border: 0; border-radius: .3em; padding: .25em .8em; cursor: pointer; }
+.btn:focus-visible, .view-toggle:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* ---------------------------------------------------------------- present */
+body.present { background: #EDEAE7; overflow: hidden; }
+body.present main { position: fixed; inset: 0; }
+body.present .slide {
+  position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px;
+  padding: 44px 70px 50px; background: var(--paper); font-size: 30px;
+  overflow: hidden; visibility: hidden; opacity: 0;
+  transform: translate(-50%, -50%) scale(var(--scale, 1));
+  transition: opacity .35s ease;
+}
+body.present .slide.current { visibility: visible; opacity: 1; }
+body.present .slide.group-example, body.present .slide.worked-example { padding-left: 52px; }
+body.present .slide h2 { font-size: 1.6em; }
+body.present .step { opacity: 0; transform: translateY(14px); transition: opacity .35s ease, transform .35s ease; }
+body.present .step.shown { opacity: 1; transform: none; }
+body.present .notes-only { display: none; }
+body.present .title-slide { background-size: cover; background-position: center; display: flex; flex-direction: column; justify-content: center; }
+body.present .title-slide h1 { font-size: 2.2em; border: 0; }
+.chrome-bar { display: none; }
+body.present .chrome-bar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; height: 26px; align-items: center;
+  justify-content: space-between; padding: 0 12px; font-size: 13px; color: var(--muted); }
+body.present .progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--brown); width: 0; transition: width .3s; }
+
+.view-toggle { position: fixed; top: 8px; right: 10px; z-index: 10; font-size: 13px; background: rgba(255,255,255,.9);
+  color: var(--brown); border: 1px solid var(--brown); border-radius: .3em; padding: .2em .6em; cursor: pointer; }
+
+/* ------------------------------------------------------------------ read */
+body.read main { max-width: 52rem; margin: 0 auto; padding: 2.5rem 1.2rem 4rem; font-size: 1.08rem; }
+body.read .slide { padding: .4rem 0 1.6rem; }
+body.read .slide.group-example, body.read .slide.worked-example { padding-left: 1rem; }
+body.read .title-slide h1 { font-size: 2rem; }
+body.read .title-slide { background-image: none !important; }
+body.read .notes { display: block; }
+body.read .present-only { display: none; }
+body.read figure img { max-width: 40rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  body.present .slide, body.present .step, body.present .progress { transition: none; }
+}
+
+/* ----------------------------------------------------------------- print */
+@media print {
+  @page {
+    size: letter;
+    margin: 0.75in 0.75in 0.8in;
+    @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 9pt "Source Sans 3", "Liberation Sans", sans-serif; color: #5E5650; }
+  }
+  html { font-size: 10.5pt; }
+  body.present, body.read, body { background: #fff; overflow: visible; }
+  body main { position: static !important; max-width: none; margin: 0; padding: 0; font-size: 10.5pt; }
+  body .slide { position: static !important; width: auto !important; height: auto !important; transform: none !important;
+    visibility: visible !important; opacity: 1 !important; padding: 0 0 10pt !important; font-size: 10.5pt !important; overflow: visible !important; }
+  body .slide.group-example, body .slide.worked-example { padding-left: 10pt !important; }
+  body .step { opacity: 1 !important; transform: none !important; }
+  body .slide h2 { font-size: 14pt !important; border-bottom-width: 3px; break-after: avoid; }
+  body .title-slide { background-image: none !important; display: block !important; }
+  body .title-slide h1 { font-size: 20pt !important; }
+  .chrome-bar, .progress, .view-toggle, .present-only, .screen-only { display: none !important; }
+  .notes, .print-only { display: block; }
+  span.print-only { display: inline; }
+  .workspace { display: block; height: var(--h, 2.2in); border: .6pt solid var(--brown); border-radius: 4pt; margin: 6pt 0 10pt; }
+  figure, table, .keep, .cols, .group-example, .worked-example { break-inside: avoid; }
+  figure img { max-width: 62%; }
+  .cols { grid-template-columns: 1fr; }
+  .page-break { break-before: page; }
+}

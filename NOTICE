@@ -1,0 +1,27 @@
+ME 4650/5950 Vehicle Dynamics
+Copyright 2026 Zachary D. Asher, AD Assurance Lab, Western Michigan University
+(https://github.com/AD-Assurance-Lab).
+
+Lecture notes, lab handouts and other documents are licensed
+under Creative Commons Attribution 4.0 International. See LICENSE-CC-BY-4.0.
+
+Code (lab starter code, solutions, scripts, build files) is licensed under the
+Apache License, Version 2.0. See LICENSE.
+
+Contributors
+- Zachary D. Asher, course instructor
+- Yi-Chen (lab development, CARLA labs)
+- Former students: see the git history and the per-week README files.
+
+Trademark
+The Western Michigan University name and logo (common/brand/) are trademarks of
+WMU. They are not covered by either license above.
+
+Third-party material
+Figures and code from other sources keep their own licenses. Each one is listed
+with its source and license in the README of the week that uses it.
+
+Bundled third-party files (see common/kit/README.md)
+- Temml 0.10.29 (MIT): common/kit/vendor/temml*, Temml.woff2
+- Latin Modern Math (GUST Font License): common/kit/vendor/latinmodern-math.otf
+- Source Sans 3 (SIL Open Font License 1.1): common/kit/fonts/
