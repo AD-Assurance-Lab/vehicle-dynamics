@@ -74,7 +74,7 @@ def print_pdf(html_path, pdf_path):
     with tempfile.TemporaryDirectory() as profile:
         cmd = [chrome(), "--headless=new", "--disable-gpu", "--no-sandbox", f"--user-data-dir={profile}",
                "--no-pdf-header-footer", "--generate-pdf-document-outline", "--allow-file-access-from-files",
-               "--virtual-time-budget=15000", f"--print-to-pdf={pdf_path}", Path(html_path).resolve().as_uri()]
+               "--virtual-time-budget=15000", f"--print-to-pdf={pdf_path}", Path(html_path).resolve().as_uri() + "?print=1"]
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
     if not Path(pdf_path).exists():
         sys.exit("Chrome did not write a PDF:\n" + r.stderr[-2000:])
@@ -188,6 +188,10 @@ def fix_pdf(pdf_path, title, lang):
                 s = str(e["/S"])[1:]
                 if s not in STANDARD_TYPES and pikepdf.Name("/" + s) not in role:
                     role[pikepdf.Name("/" + s)] = pikepdf.Name("/" + ROLE_FALLBACK.get(s, "Span"))
+                if s == "Figure" and str(e.get("/Alt", "")).startswith("Math: "):
+                    e.S = pikepdf.Name("/Formula")      # kit wrapped this formula with its spoken form
+                    e.Alt = pikepdf.String(str(e.Alt)[6:])
+                    return
                 if s == "Figure" and "/Alt" not in e:
                     alt = has_alt_below(e)
                     if alt:

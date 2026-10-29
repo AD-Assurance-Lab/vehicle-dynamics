@@ -51,6 +51,9 @@ figcaption { color: var(--muted); font-size: .8em; margin-top: .2em; }
 .group-example { border-left: 18px solid var(--gold); }
 .worked-example { border-left: 18px solid var(--brown); }
 
+/* Read by screen readers only */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
 /* Only in one view */
 .workspace { display: none; }
 .print-only { display: none; }

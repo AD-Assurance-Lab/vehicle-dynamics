@@ -223,7 +223,8 @@
           <button class="btn" id="dyk-lock" type="button">Lock it in</button>
         </div>
         <div id="dyk-reveal" hidden>
-          <p class="dyk-answer" id="dyk-answer" aria-live="polite"></p>
+          <p class="dyk-answer" id="dyk-answer" aria-hidden="true"></p>
+          <p class="sr-only" id="dyk-said" aria-live="polite"></p>
           <p class="dyk-note" id="dyk-note"></p>
           <p class="dyk-src" id="dyk-src"></p>
           <button class="btn" id="dyk-next" type="button">Next</button>
@@ -357,6 +358,7 @@
   <h2>Three speedometers, one car</h2>
   <div class="screen-only interactive" data-fallback="speed-table">
     <div class="gauges" id="gauges"></div>
+    <p class="sr-only" id="gauge-said" aria-live="polite"></p>
     <div class="controls">
       <label for="sp">Speed (mph)</label><input type="range" id="sp" min="0" max="90" step="1" value="62" style="width: 20em">
     </div>
@@ -380,7 +382,7 @@
   <h2>The simplest model: a point mass</h2>
   <figure class="pm">
     <div class="stage">
-    <img src="photos/lincoln-mkz.jpg" alt="Side view of a white Lincoln MKZ sedan, facing left.">
+    <img src="photos/lincoln-mkz.jpg" alt="">
     <svg viewBox="0 0 1600 614" role="img" aria-labelledby="pm-title pm-desc">
       <title id="pm-title">A Lincoln MKZ drawn as a point mass</title>
       <desc id="pm-desc">Photo of a white Lincoln MKZ from its left rear, facing left. The photo fades and the whole car becomes
@@ -540,7 +542,8 @@
       </svg>
       <div>
         <div class="controls"><button class="btn" id="merge-play" type="button">Play</button><span>at twice real speed</span></div>
-        <p class="readout" id="merge-clock" aria-live="polite">t = 0.0 s</p>
+        <p class="readout" id="merge-clock" aria-hidden="true">t = 0.0 s</p>
+        <p class="sr-only" id="merge-said" aria-live="polite"></p>
       </div>
     </div>
   </div>
@@ -763,6 +766,7 @@ d = v0**2 / (2 * mu * 9.81)   # m</code></pre>
       const f = facts[i];
       $("dyk-guess-wrap").hidden = true; $("dyk-reveal").hidden = false;
       $("dyk-note").textContent = f.note; $("dyk-src").textContent = "Source: " + f.src;
+      $("dyk-said").textContent = `Answer: ${f.show}.`;
       const tag = document.querySelectorAll("#dyk-photos .tag")[1];
       if (tag) tag.textContent = "38 a day";
       const a = $("dyk-answer");
@@ -874,6 +878,7 @@ d = v0**2 / (2 * mu * 9.81)   # m</code></pre>
         $("n-" + unit).setAttribute("x2", 120 + 95 * Math.cos(a)); $("n-" + unit).setAttribute("y2", 140 - 95 * Math.sin(a));
         $("v-" + unit).textContent = unit === "mph" ? v.toFixed(0) : v.toFixed(1);
       }
+      $("gauge-said").textContent = `${mph.toFixed(0)} mph is ${(mph * 1.609344).toFixed(1)} km/h and ${(mph * MPH).toFixed(1)} m/s.`;
     }
     $("sp").addEventListener("input", () => update(+$("sp").value));
     document.querySelectorAll("[data-mph]").forEach(b => b.addEventListener("click", () => {
@@ -918,6 +923,7 @@ d = v0**2 / (2 * mu * 9.81)   # m</code></pre>
         $("fin-" + k).textContent = t >= c.T ? `${c.T.toFixed(1)} s` : "";
       });
       $("merge-clock").textContent = `t = ${t.toFixed(1)} s`;
+      if (t >= Math.max(cars.A.T, cars.B.T)) $("merge-said").textContent = `Car A finishes at ${cars.A.T.toFixed(1)} s. Car B finishes at ${cars.B.T.toFixed(1)} s.`;
     }
     let raf = null;
     $("merge-play").addEventListener("click", () => {

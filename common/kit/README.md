@@ -31,6 +31,10 @@ One HTML file gives three views:
   itself must stop within 5 s (WCAG 2.2.2); longer animations start from a button.
 - Every form control needs a text label; a label that is only math needs `aria-label` too.
 - Check the web page with axe (WCAG 2.1 AA) as well as the PDF with veraPDF.
+- Math in the handout PDF is tagged as Formula with a spoken form ("a equals d v over d t"), made by the kit
+  when `tools/build_pdf.py` prints with `?print=1`. Check new LaTeX constructs read sensibly.
+- `aria-live` text must change once per event, never every animation frame. Use `class="sr-only"` for
+  text only screen readers need (readings of a drawn gauge, a final result).
 - Empty table cells do not get tagged. Put a visible mark such as `?` in blank
   answer cells.
 

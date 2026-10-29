@@ -6,7 +6,7 @@
    - Each slide is <section class="slide"> with an <h2> (the title slide uses <h1>).
    - Add class "step" to anything that should appear on a click.
    - Math: \( ... \) inline and \[ ... \] display, written as LaTeX.
-   - .present-only: only on the projected slides. .notes: only in notes view and print.
+   - .present-only: only on the projected slides. .notes: only in notes view (never printed).
    - .screen-only needs data-fallback="id" pointing to a .print-only element.
    - <div class="workspace" style="--h:2.5in"></div>: blank box, printed handout only.
 
@@ -51,6 +51,58 @@
       if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
       node.parentNode.replaceChild(frag, node);
     }
+  }
+
+  // ---------- spoken math for the handout PDF ----------
+  // Chrome tags MathML in a PDF as plain text, so a screen reader would read dv/dt as "d v d t".
+  // When tools/build_pdf.py prints (?print=1), each formula is wrapped with a spoken label, and the
+  // build turns that wrapper into a PDF Formula tag. The web page keeps plain MathML.
+  const SAY = { "=": "equals", "+": "plus", "−": "minus", "-": "minus", "×": "times", "⋅": "times",
+    "/": "over", "≈": "is approximately", ">": "is greater than", "<": "is less than", "≤": "is at most",
+    "≥": "is at least", "⇒": "so", "→": "to", "′": "prime", "″": "double prime",
+    "∫": "integral", "∑": "sum", "(": "open paren", ")": "close paren", "[": "open bracket",
+    "]": "close bracket", "|": "absolute value", "‖": "norm", "%": "percent", "‾": "bar", "¯": "bar",
+    "ˉ": "bar", "̅": "bar", "∞": "infinity", "±": "plus or minus", "Δ": "delta", "∂": "partial",
+    "∈": "in", "⁡": "", "⁢": "", "⁣": "", ",": "comma" };
+  const GREEK = { "α": "alpha", "β": "beta", "γ": "gamma", "δ": "delta", "ε": "epsilon",
+    "θ": "theta", "λ": "lambda", "μ": "mu", "π": "pi", "ρ": "rho", "σ": "sigma",
+    "τ": "tau", "φ": "phi", "ψ": "psi", "ω": "omega", "Δ": "delta", "Ω": "omega" };
+  function word(s) {
+    if (s in SAY) return SAY[s];          // before NFKC, which turns the overline into a space plus a combining mark
+    s = s.normalize("NFKC");
+    if (s in SAY) return SAY[s];
+    return Array.from(s).map(c => GREEK[c] || c).join(GREEK[s[0]] ? " " : "");
+  }
+  function simple(s) { return s.split(" ").length <= 2; }
+  function speak(n) {
+    const tag = n.localName, kids = () => Array.from(n.children).map(speak).filter(Boolean);
+    switch (tag) {
+      case "annotation": case "annotation-xml": return "";
+      case "mspace": return parseFloat(n.getAttribute("width")) >= 1 ? ";" : "";
+      case "mi": case "mn": case "mtext": case "ms": return word(n.textContent.trim());
+      case "mo": return word(n.textContent.trim());
+      case "mfrac": { const [a, b] = kids(); if (a === "1" && b === "2") return "one half"; return simple(a) && simple(b) ? `${a} over ${b}` : `the fraction ${a}, over ${b}, end fraction`; }
+      case "msup": { const [a, b] = kids(); return b === "2" ? `${a} squared` : b === "3" ? `${a} cubed` : /prime/.test(b) ? `${a} ${b}` : `${a} to the power ${b}`; }
+      case "msub": { const [a, b] = kids(); return `${a} sub ${b}`; }
+      case "msubsup": { const [a, b, c] = kids(); return a === "integral" ? `integral from ${b} to ${c} of` : `${a} sub ${b} ${c === "2" ? "squared" : "to the power " + c}`; }
+      case "munderover": { const [a, b, c] = kids(); return `${a} from ${b} to ${c} of`; }
+      case "mover": { const [a, b] = kids(); return `${a} ${b}`; }
+      case "munder": { const [a, b] = kids(); return `${a} under ${b}`; }
+      case "msqrt": return `square root of ${kids().join(" ")}, end root`;
+      case "menclose": return `crossed out ${kids().join(" ")}`;
+      case "mtr": return kids().join(" ") + ";";
+      default: return kids().join(" ");
+    }
+  }
+  function speakAllMath(root) {
+    root.querySelectorAll("math").forEach(m => {
+      const said = speak(m).replace(/\s+/g, " ").replace(/ ([,;])/g, "$1").replace(/[,;]$/, "").trim();
+      const wrap = document.createElement("span");
+      wrap.setAttribute("role", "img");
+      wrap.setAttribute("aria-label", "Math: " + said);
+      if (m.getAttribute("display") === "block") wrap.style.display = "block";
+      m.replaceWith(wrap); wrap.appendChild(m);
+    });
   }
 
   // ---------- views ----------
@@ -106,6 +158,7 @@
   // ---------- startup ----------
   function init() {
     renderMath(document.body);
+    if (new URLSearchParams(location.search).has("print")) speakAllMath(document.body);
 
     // view toggle, footer bar, progress, live region
     const toggle = document.createElement("button");
@@ -161,7 +214,7 @@
     document.documentElement.dataset.ready = "true";   // the PDF build waits for this
   }
 
-  window.CourseKit = { renderMath };
+  window.CourseKit = { renderMath, speak };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 })();
