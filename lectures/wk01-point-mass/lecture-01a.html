@@ -1,0 +1,981 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lecture 1A: What Is the Point of Vehicle Dynamics? Starting from Basics: Point Mass Model and Constant Acceleration</title>
+<meta name="author" content="Zachary D. Asher">
+<meta name="description" content="ME 4650/5950 Vehicle Dynamics and Control, Week 1, Lecture A. Slides, notes and the printable handout from one file.">
+<link rel="stylesheet" href="../../common/kit/course.css">
+<script src="../../common/kit/vendor/temml.min.js" defer></script>
+<script src="../../common/kit/course.js" defer></script>
+<style>
+  /* Lecture 1A. Cars are everywhere and software drives them. The simplest model of one is a point mass,
+     and every equation used today is derived on the slides first. */
+  svg text { font-family: var(--font); }
+  svg text:not([fill]) { fill: var(--ink); }
+  .muted-text { fill: var(--muted); }
+  .controls { display: flex; gap: .8em; align-items: center; flex-wrap: wrap; font-size: .85em; margin-top: .3em; }
+  .controls output, .readout b { font-weight: 700; color: var(--brown); }
+  .readout { font-size: .9em; margin: .3em 0 0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2em; align-items: start; }
+  body.read .two { grid-template-columns: 1fr; }
+  .btn.secondary { background: #fff; color: var(--brown); border: 2px solid var(--brown); }
+  input[type=range] { width: 100%; }
+  img { border-radius: 6px; }
+
+  /* title */
+  body.present .title-panel { background: rgba(255,255,255,.93); border-left: 12px solid var(--gold); padding: .6em 1em .7em; align-self: flex-start; max-width: 96%; }
+  body.present .title-slide h1 { font-size: 1.8em; line-height: 1.15; margin-bottom: .2em; }
+  .title-slide .subtitle { font-size: 1.05em; font-weight: 600; color: var(--brown); margin: 0 0 1.4em; white-space: nowrap; }
+  .title-slide .meta { font-size: .72em; color: var(--muted); margin: 0; line-height: 1.45; }
+  .title-slide .logo { margin: .8em 0 .1em; }
+  .title-slide .logo img { height: 1.1em; width: auto; border-radius: 0; display: block; }
+
+  /* group example: photo and question stay up while the solution builds */
+  .solve { display: grid; grid-template-columns: 30% 1fr; gap: 1.2em; align-items: start; }
+  .solve figure { margin: 0; }
+  body.present .solve img { width: 100%; height: 500px; object-fit: cover; }
+  .solve .q { font-size: 1em; line-height: 1.3; margin: 0 0 .3em; }
+  body.read .solve { grid-template-columns: 1fr; }
+  .prow { display: grid; grid-template-columns: 4.4em 1fr; align-items: center; margin: 1.1em 0; }
+  .part { font-weight: 700; color: var(--brown); }
+  .chain { font-size: 1.1em; margin: 0; }
+  .swap { display: grid; }
+  .swap > * { grid-area: 1 / 1; background: var(--bg, #fff); margin: 0; }
+  body.read .swap > :first-child { display: none; }
+  /* the crossed-off chain replaces the plain one in place: no slide, no fade */
+  body.present .swap > .step { transform: none; transition: none; }
+  .swap:has(> .step.shown) > :first-child { visibility: hidden; }
+  .ans { color: var(--brown); font-weight: 700; }
+  .blank { display: none; }
+  .verdict { background: var(--gold-light); border-left: 8px solid var(--gold); padding: .3em .7em; margin-top: .5em; }
+
+  /* derivations: one move per row, the reason beside it */
+  .deriv { margin-top: .4em; }
+  .deriv .row { display: grid; grid-template-columns: 66% 1fr; gap: 1em; align-items: center; min-height: 2.6em; }
+  .deriv .why { color: var(--muted); font-size: .85em; }
+  .deriv .math { font-size: 1.15em; }
+  .result { background: var(--gold-light); border-left: 8px solid var(--gold); padding: .15em .7em; }
+  .deriv.stack .row { grid-template-columns: 1fr; gap: 0; margin-bottom: .5em; }
+  /* substitutions: the numbered equation we use, an arrow saying what we do with it, the result */
+  .deriv .row.sub { grid-template-columns: 1fr; }
+  .subst { display: flex; align-items: center; gap: .5em; flex-wrap: wrap; }
+  body.present .subst.one-line { flex-wrap: nowrap; }
+  body.present .subst.one-line > .math:last-child { font-size: 1em; }
+  .src { background: var(--gold-light); border: 2px solid var(--gold); border-radius: 8px; padding: .05em .5em; }
+  .arrow { display: inline-flex; flex-direction: column; align-items: center; flex-shrink: 0; white-space: nowrap; color: var(--muted); font-size: .72em; line-height: 1.15; }
+  .arrow svg { width: 6.5em; height: 1.1em; }
+  /* the table to remember: a slowly turning rainbow frame */
+  @property --ang { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+  .rainbow { position: relative; isolation: isolate; border-radius: 12px; padding: 5px;
+    background: conic-gradient(from var(--ang), #E63946, #F4A261, #F1C500, #2A9D8F, #457B9D, #8E44AD, #E63946);
+    animation: rainbow-turn 4s linear infinite; }
+  .rainbow::before { content: ""; position: absolute; inset: -4px; border-radius: 16px; background: inherit; filter: blur(12px);
+    opacity: .55; z-index: -1; }
+  .rainbow > table { background: #fff; border-radius: 8px; margin: 0; width: 100%; }
+  .rainbow caption { background: #fff; border-radius: 8px 8px 0 0; padding: .3em .6em; margin-bottom: 4px; }
+  @keyframes rainbow-turn { to { --ang: 360deg; } }
+  @media (prefers-reduced-motion: reduce) { .rainbow { animation: none; } }
+  .eqtable td, .eqtable th { padding: .25em .6em; }
+  .eqs .eqtable { font-size: .74em; }
+  .eqs .eqtable td, .eqs .eqtable th { padding: .25em .45em; }
+  body.present .eqs { grid-template-columns: minmax(0, 1fr) max-content; gap: 1.6em; align-items: start; }
+  body.present .eqs .rainbow { margin: .2em 14px 0 0; }
+  .eqtable td:first-child { font-weight: 700; color: var(--brown); }
+
+  /* did you know */
+  .dyk { display: grid; grid-template-columns: 1fr 1.25fr; gap: 1.3em; align-items: center; }
+  .dyk-q { font-size: 1.12em; line-height: 1.3; min-height: 3.3em; }
+  .dyk-guess { font-size: 1.5em; font-weight: 700; color: var(--brown); }
+  .dyk-answer { font-size: 2.5em; font-weight: 700; color: var(--brown); line-height: 1.1; margin: .1em 0; }
+  .dyk-note { font-size: .85em; color: var(--muted); }
+  .dyk-src { font-size: .5em; color: var(--muted); }
+  .dyk-scale { display: flex; justify-content: space-between; font-size: .6em; color: var(--muted); }
+  .dyk-photos { display: grid; gap: .5em; }
+  .dyk-photos.pair { grid-template-columns: 1fr 1fr; }
+  .dyk-photos figure { margin: 0; position: relative; }
+  .dyk-photos img { width: 100%; height: 470px; object-fit: cover; display: block; }
+  .dyk-photos .tag { position: absolute; left: .4em; bottom: .6em; background: rgba(255,255,255,.92); color: var(--brown);
+    font-weight: 700; padding: .1em .5em; border-radius: .25em; font-size: .8em; }
+  .dyk-dots { display: flex; gap: .4em; margin-top: .6em; }
+  .dyk-dots span { width: .55em; height: .55em; border-radius: 50%; background: #C9C2BD; display: inline-block; }
+  .dyk-dots span.on { background: var(--brown); }
+
+  /* the field, and the course through it */
+  .timeline svg, .map svg { width: 100%; height: auto; }
+  body.present .map svg { height: 580px; width: auto; display: block; margin: 0 auto; }
+  body.present .timeline .step { transform: none; }
+  body.present .map .fly { transform: translate(var(--dx), var(--dy)); transition: opacity .3s ease, transform 1s cubic-bezier(.3,.8,.25,1); }
+  body.present .map .fly.shown { transform: none; }
+
+  /* speed gauges */
+  .gauges { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5em; }
+  .gauges svg { width: 100%; height: auto; }
+  .answer-table td { min-width: 4.2em; height: 1.6em; }
+
+  /* the point mass on a real car */
+  .pm svg { width: 100%; height: auto; }
+  body.present .pm .step { transform: none; }
+  .pm .stage { position: relative; }
+  body.present .pm .stage { width: 68%; margin: 0 auto; }
+  .pm .stage img { display: block; width: 100%; height: auto; max-width: none; }
+  .pm .stage svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  .pm-lists { margin-top: .5em; }
+  .pm-lists ul { margin: .2em 0; }
+  .pm-lists p { margin: 0; font-weight: 700; color: var(--brown); }
+  .pm-lists p.caveat { font-weight: 400; color: var(--muted); font-size: .85em; }
+
+  /* worked example: two cars on a merge lane */
+  .merge { margin: 0 0 .4em; position: relative; }
+  .merge .lane { position: relative; height: 72px; border-bottom: 3px solid #C9C2BD; }
+  .merge img { position: absolute; left: 2.2em; bottom: 2px; height: 56px; width: auto; border-radius: 0; }
+  .merge .who { position: absolute; left: 0; bottom: 10px; font-size: 1.4em; font-weight: 700; color: var(--brown); }
+  .merge .how { position: absolute; left: calc(2.2em + 236px); bottom: 14px; font-size: .8em; color: var(--muted); }
+  .merge .fin { position: absolute; right: .3em; bottom: 14px; font-size: .8em; color: var(--muted); }
+  .merge .ruler { display: flex; justify-content: space-between; font-size: .75em; color: var(--muted); padding: .15em 0 0 2.6em; }
+  .merge::after { content: ""; position: absolute; right: 0; top: 0; height: 147px; border-right: 3px dashed #5E5650; }
+  #merge-live img { transform: translateX(var(--x, 0px)); }
+  #merge-live .fin { font-weight: 700; color: var(--brown); font-size: .9em; right: 270px; }
+  .qs { margin: .3em 0; font-size: .82em; }
+  .qs li { margin: .45em 0; }
+  .lede { margin: .2em 0; white-space: nowrap; }
+  .vt-row { grid-template-columns: 1.25fr 1fr; align-items: center; }
+  body.present .vt { max-height: 330px; }
+  .vt-row p { margin: .3em 0; font-size: .92em; }
+  .vt, #merge-sketch svg { width: 100%; height: auto; }
+  #merge-sketch svg { max-width: 5in; }
+  .fbd svg { width: 100%; height: auto; }
+  body.present .fbdrow { grid-template-columns: .75fr 1.25fr; align-items: center; }
+  body.present .fbdrow .row { margin-bottom: .3em; }
+
+  /* stop bars, fit */
+  .squared svg { width: 100%; height: auto; }
+  body.present .squared .step { transform: none; }
+  .fit text.axis { fill: var(--muted); }
+  body.present .fit { max-height: 340px; }
+  body.present .fitrow .controls { flex-wrap: nowrap; }
+  body.present .fitrow .readout { margin: 0; font-size: .8em; }
+  body.present .fitrow { grid-template-columns: 1.15fr 1fr; }
+  body.present .fitrow .tight { font-size: .85em; }
+  .task-line { margin: 0 0 .3em; }
+  .snippet { background: #F6F3F0; border: 1px solid #C9C2BD; border-radius: 6px; padding: .4em .7em; font-size: .85em; margin: .3em 0; }
+  body.present .fitrow .readout + .readout, body.present #fit-ab { margin: 0; }
+  body.present .tight p { margin: .3em 0; }
+  .credits { font-size: .7em; }
+  .credits li { margin: .15em 0; }
+
+  @media print {
+    /* keep each slide on one page when it fits */
+    .slide { break-inside: avoid; }
+    .solve, .dyk { display: block; }
+    .solve img { max-height: 2.2in; width: auto; max-width: 50%; }
+    .swap > :first-child { display: none; }
+    .ans { display: none; }
+    .blank { display: inline; }
+    .title-slide .logo img { height: .3in; }
+    .rainbow { background: none; border: 3px solid #C9A200; padding: 0; animation: none; }
+    .rainbow::before { display: none; }
+    .pm .stage { max-width: 70%; }
+    .squared svg { max-width: 60%; }
+    .subst { margin: .3em 0; }
+    .fbd svg { max-width: 55%; }
+    .merge { max-width: 6.5in; }
+    .merge .lane { height: .6in; }
+    .merge img { height: .42in; }
+    .merge .how { left: calc(2.2em + 1.75in); }
+    .merge::after { height: calc(1.2in + 6px); }
+  }
+</style>
+</head>
+<body data-course="ME 4650/5950 Vehicle Dynamics &amp; Control · Lecture 1A">
+<main>
+
+<!-- 1 -->
+<section class="slide title-slide" style="background-image: linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,.35)), url('figures/carla-wet-road.png')">
+  <div class="title-panel">
+    <h1>What Is the Point of Vehicle Dynamics?</h1>
+    <p class="subtitle">Starting from Basics: Point Mass Model and Constant Acceleration</p>
+    <p class="meta">Zachary D. Asher, PhD</p>
+    <p class="meta">ME 4650/5950 Vehicle Dynamics &amp; Control</p>
+    <p class="meta">Lecture 1A, Monday, January 11, 2027</p>
+    <p class="logo"><img src="../../common/brand/wmu-logo-horizontal.png" alt="Western Michigan University"></p>
+  </div>
+  <p class="notes muted">This handout is the complete notes for the lecture. Write your work in the boxes and blanks.
+  Group-example solutions are posted on eLearning after class, and quiz problems look like them.</p>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <h2>Did you know?</h2>
+  <div class="screen-only interactive" data-fallback="dyk-print">
+    <div class="dyk">
+      <div>
+        <p class="dyk-q" id="dyk-q"></p>
+        <div id="dyk-guess-wrap">
+          <input type="range" id="dyk-range" aria-labelledby="dyk-q">
+          <div class="dyk-scale" aria-hidden="true"><span id="dyk-min"></span><span id="dyk-max"></span></div>
+          <p>Your guess: <span class="dyk-guess" id="dyk-guess"></span></p>
+          <button class="btn" id="dyk-lock" type="button">Lock it in</button>
+        </div>
+        <div id="dyk-reveal" hidden>
+          <p class="dyk-answer" id="dyk-answer" aria-live="polite"></p>
+          <p class="dyk-note" id="dyk-note"></p>
+          <p class="dyk-src" id="dyk-src"></p>
+          <button class="btn" id="dyk-next" type="button">Next</button>
+        </div>
+        <div class="dyk-dots" id="dyk-dots" aria-hidden="true"></div>
+      </div>
+      <div class="dyk-photos" id="dyk-photos"></div>
+    </div>
+  </div>
+  <div class="print-only" id="dyk-print">
+    <ol>
+      <li>There are about 285 million registered motor vehicles in the United States: about one for every person.</li>
+      <li>There are about 2 billion parking spots in the United States, about 7 for every vehicle.</li>
+      <li>Toyota builds about 27,000 cars a day. Ferrari builds about 38.</li>
+      <li>40% of owners name their car. Examples on record: Purrrsilla, Big Bertha, The Slug, Party Chicken.</li>
+      <li>90% of drivers admit to singing in the car.</li>
+    </ol>
+    <p class="muted" style="font-size:.8em">Sources: self.inc car-ownership statistics; Parking &amp; Mobility magazine, April 2024;
+    Ferrari 2024 annual results; New York Post, July 3, 2025; sunautoservice.com car facts.</p>
+  </div>
+  <p class="notes">Cars are everywhere, people love them, and nearly every one of them is now steered, braked and
+  accelerated by software. That software has to respect physics.</p>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <h2>The vehicle dynamics and control field</h2>
+  <figure class="timeline">
+    <svg viewBox="0 30 1000 330" role="img" aria-labelledby="tl-title tl-desc">
+      <title id="tl-title">Five control and estimation tools, by the year each first reached a car you could buy</title>
+      <desc id="tl-desc">A timeline with five stops. 1958: PID-style feedback in cruise control, Chrysler. 1995: estimation in
+      stability control, Mercedes-Benz with Bosch. 2001: path tracking in lane keeping, Nissan. 2018: model predictive control
+      in engine control, General Motors. 2024: one end-to-end neural network that steers and sets speed in a driver
+      assistance system, Tesla.</desc>
+      <text x="60" y="58" font-size="17" fill="#5E5650">First year in a car you could buy</text>
+      <line x1="60" y1="240" x2="940" y2="240" stroke="#C9C2BD" stroke-width="6" stroke-linecap="round"/>
+      <g id="tl"></g>
+    </svg>
+  </figure>
+  <p class="notes">PID: proportional, integral, derivative control; cruise control holds a set speed by feedback. Kalman
+  filter: the best-known estimator, which blends a model with noisy sensors; stability control has to estimate how much the
+  car is sliding, because no production sensor measures it. Pure pursuit and Stanley: two path-tracking controllers. MPC:
+  model predictive control. End-to-end AI: one neural network from camera images to steering and speed, in place of
+  hand-written code. Vehicle dynamics is the study of how a vehicle moves and why; control is making it move the way
+  we want. Sources: Chrysler Auto-Pilot, 1958 Imperial (Wikipedia, Cruise control); Bosch ESP, 1995 Mercedes-Benz S-Class
+  coupe (van Zanten, SAE 950759); Nissan Cima lane keeping, January 2001 (Nissan); GM turbocharged engine MPC in
+  production from 2018 (Bemporad et al., SAE 2018-01-0875); Tesla FSD v12, a single end-to-end network, to customers from
+  January 2024 (Tesla release notes).</p>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+  <h2>You will build every one of them</h2>
+  <figure class="map">
+    <svg viewBox="0 0 1000 490" role="img" aria-labelledby="map-title map-desc">
+      <title id="map-title">The tools of the field, placed on the course road</title>
+      <desc id="map-desc">Top, small: the five tools from the timeline, in the order the field invented them. Below, large:
+      the course as a road through models of increasing fidelity: the point mass in week 1, the kinematic bicycle in weeks 2
+      to 4, tires and the dynamic bicycle in weeks 5 to 7, control in weeks 9 to 11, and the friction limit in weeks 12 and
+      13. Each tool drops onto the week where you build it: pure pursuit in week 3, the Kalman filter in week 4, PID in week
+      9 for adaptive cruise, MPC in week 10, and learned models in week 11. Today is the point mass.</desc>
+      <text x="20" y="18" font-size="15" fill="#5E5650">The field, 1958 to today</text>
+      <line x1="60" y1="70" x2="940" y2="70" stroke="#EDEAE7" stroke-width="3" stroke-linecap="round"/>
+      <g id="map-top"></g>
+      <rect x="0" y="26" width="1000" height="82" fill="#fff" fill-opacity=".55"/>
+      <g id="map-top-labels"></g>
+      <text x="20" y="150" font-size="20" fill="#5E5650">This course, January to April</text>
+      <path id="road" d="M 40 390 C 260 390 260 355 500 355 S 740 390 960 390" fill="none" stroke="#C9C2BD" stroke-width="34" stroke-linecap="round"/>
+      <path d="M 40 390 C 260 390 260 355 500 355 S 740 390 960 390" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="18 14"/>
+      <g id="map-stops"></g>
+      <g id="map-tools"></g>
+    </svg>
+  </figure>
+  <p class="notes">The course climbs the same ladder as the field: start with the simplest model, find where it fails, add
+  only what is needed. Every Friday lab makes that week's model drive a car in CARLA, the driving simulator we use all
+  semester.</p>
+</section>
+
+<!-- 5 -->
+<section class="slide group-example">
+  <span class="example-label">Group example 1</span>
+  <h2>A feel for speed: the Ontario sign</h2>
+  <div class="solve">
+    <figure>
+      <img src="photos/ontario-100-sign.jpg" alt="A white Canadian speed limit sign reading Maximum 100 km/h beside a highway lined with trees.">
+    </figure>
+    <div>
+      <p class="q">You cross the Blue Water Bridge into Ontario and pass this sign. How fast is that in mph? In m/s?</p>
+      <div class="prow step"><span class="part">(a) mph</span><div class="swap">
+        <p class="chain">\( \dfrac{100\ \text{km}}{1\ \text{h}} \times \dfrac{1\ \text{mi}}{1.609\ \text{km}} \)</p>
+        <p class="chain step">\( \dfrac{100\ \cancel{\text{km}}}{1\ \text{h}} \times \dfrac{1\ \text{mi}}{1.609\ \cancel{\text{km}}} = \) <span class="ans">62.2 mi/h</span><span class="blank">________</span></p>
+      </div></div>
+      <div class="prow step"><span class="part">(b) m/s</span><div class="swap">
+        <p class="chain">\( \dfrac{100\ \text{km}}{1\ \text{h}} \times \dfrac{1000\ \text{m}}{1\ \text{km}} \times \dfrac{1\ \text{h}}{3600\ \text{s}} \)</p>
+        <p class="chain step">\( \dfrac{100\ \cancel{\text{km}}}{1\ \cancel{\text{h}}} \times \dfrac{1000\ \text{m}}{1\ \cancel{\text{km}}} \times \dfrac{1\ \cancel{\text{h}}}{3600\ \text{s}} = \) <span class="ans">27.8 m/s</span><span class="blank">________</span></p>
+      </div></div>
+      <p class="step verdict">A Michigan freeway, 70 mph, is 113 km/h. Ontario's highways run a little slower.</p>
+    </div>
+  </div>
+  <div class="workspace" style="--h: 1in" aria-hidden="true"></div>
+  <p class="notes">Write every factor as a fraction with its units, then cross off units in pairs. What is left has to be the
+  unit you want. If it is not, a factor is upside down. Engineers do the math in m/s and feel speed in mph.</p>
+</section>
+
+<!-- 6 -->
+<section class="slide group-example">
+  <span class="example-label">Group example 1</span>
+  <h2>A feel for speed: a test on Stadium Drive?</h2>
+  <div class="solve">
+    <figure>
+      <img src="photos/stadium-drive.jpg" alt="A green Stadium Dr street sign on a traffic signal mast, silhouetted against an evening sky in Kalamazoo.">
+    </figure>
+    <div>
+      <p class="q">An engineer asks you to run a braking test at <strong>35 m/s</strong>. Can you do it on Stadium Drive, a city street?</p>
+      <div class="prow step"><span class="part">(a) km/h</span><div class="swap">
+        <p class="chain">\( \dfrac{35\ \text{m}}{1\ \text{s}} \times \dfrac{3600\ \text{s}}{1\ \text{h}} \times \dfrac{1\ \text{km}}{1000\ \text{m}} \)</p>
+        <p class="chain step">\( \dfrac{35\ \cancel{\text{m}}}{1\ \cancel{\text{s}}} \times \dfrac{3600\ \cancel{\text{s}}}{1\ \text{h}} \times \dfrac{1\ \text{km}}{1000\ \cancel{\text{m}}} = \) <span class="ans">126 km/h</span><span class="blank">________</span></p>
+      </div></div>
+      <div class="prow step"><span class="part">(b) mph</span><div class="swap">
+        <p class="chain">\( \dfrac{126\ \text{km}}{1\ \text{h}} \times \dfrac{1\ \text{mi}}{1.609\ \text{km}} \)</p>
+        <p class="chain step">\( \dfrac{126\ \cancel{\text{km}}}{1\ \text{h}} \times \dfrac{1\ \text{mi}}{1.609\ \cancel{\text{km}}} = \) <span class="ans">78.3 mi/h</span><span class="blank">________</span></p>
+      </div></div>
+      <p class="step verdict">Freeway speed, so no: this test belongs on a closed track, or in CARLA, the driving simulator we use in lab.</p>
+    </div>
+  </div>
+  <div class="workspace" style="--h: 1in" aria-hidden="true"></div>
+</section>
+
+<!-- 7 -->
+<section class="slide group-example">
+  <span class="example-label">Group example 1</span>
+  <h2>Three speedometers, one car</h2>
+  <div class="screen-only interactive" data-fallback="speed-table">
+    <div class="gauges" id="gauges"></div>
+    <div class="controls">
+      <label for="sp">Speed (mph)</label><input type="range" id="sp" min="0" max="90" step="1" value="62" style="width: 20em">
+    </div>
+    <div class="controls">
+      <span>Jump to</span>
+      <button class="btn secondary" type="button" data-mph="62.15">Ontario sign</button>
+      <button class="btn secondary" type="button" data-mph="78.3">The 35 m/s test</button>
+      <button class="btn secondary" type="button" data-mph="70">Michigan freeway</button>
+    </div>
+  </div>
+  <table class="answer-table print-only" id="speed-table">
+    <caption>Fill in the table. 1 mi = 1.609 km.</caption>
+    <thead><tr><th scope="col">mph</th><th scope="col">15</th><th scope="col">25</th><th scope="col">35</th><th scope="col">55</th><th scope="col">70</th></tr></thead>
+    <tbody><tr><th scope="row">km/h</th><td class="muted">?</td><td class="muted">?</td><td class="muted">?</td><td class="muted">?</td><td class="muted">?</td></tr>
+           <tr><th scope="row">m/s</th><td class="muted">?</td><td class="muted">?</td><td class="muted">?</td><td class="muted">?</td><td class="muted">?</td></tr></tbody>
+  </table>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+  <h2>The simplest model: a point mass</h2>
+  <figure class="pm">
+    <div class="stage">
+    <img src="photos/lincoln-mkz.jpg" alt="Side view of a white Lincoln MKZ sedan, facing left.">
+    <svg viewBox="0 0 1600 614" role="img" aria-labelledby="pm-title pm-desc">
+      <title id="pm-title">A Lincoln MKZ drawn as a point mass</title>
+      <desc id="pm-desc">Photo of a white Lincoln MKZ from its left rear, facing left. The photo fades and the whole car becomes
+      one point. The x axis points forward along the car, to the left and slightly up the page: longitudinal. The y axis points to
+      the driver's left, which in this photo is toward us, drawn down and to the left: lateral.</desc>
+      <g class="step">
+        <rect x="0" y="0" width="1600" height="614" fill="#fff" fill-opacity=".62"/>
+        <circle cx="720" cy="330" r="24" fill="#F1C500" stroke="#532E1F" stroke-width="6"/>
+        <text x="760" y="315" font-size="56" fill="#532E1F" font-weight="700">the whole car: one point</text>
+      </g>
+      <g class="step">
+        <line x1="690" y1="328" x2="300" y2="296" stroke="#532E1F" stroke-width="10" marker-end="url(#ar-b)"/>
+        <text x="300" y="262" font-size="64" fill="#532E1F" font-weight="700">x</text>
+        <text x="350" y="262" font-size="48" fill="#532E1F">longitudinal</text>
+        <line x1="706" y1="352" x2="590" y2="540" stroke="#532E1F" stroke-width="10" marker-end="url(#ar-b)"/>
+        <rect x="630" y="512" width="470" height="66" rx="10" fill="#fff" fill-opacity=".85"/>
+        <text x="530" y="600" font-size="64" fill="#532E1F" font-weight="700">y</text>
+        <text x="645" y="560" font-size="48" fill="#532E1F">lateral (driver's left)</text>
+      </g>
+      <defs>
+        <marker id="ar-b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#532E1F"/></marker>
+      </defs>
+    </svg>
+    </div>
+  </figure>
+  <div class="two pm-lists">
+    <div class="step">
+      <p>It ignores</p>
+      <ul><li>size, shape and how the mass is spread</li><li>wheelbase, track width and steering geometry</li><li>tire forces and the powertrain</li></ul>
+    </div>
+    <div class="step">
+      <p>It keeps</p>
+      <ul><li>position \(x(t)\)</li><li>velocity \(v = dx/dt\)</li><li>acceleration \(a = dv/dt\), assumed constant today</li></ul>
+      <p class="caveat">Not true once forces depend on position or speed.</p>
+    </div>
+  </div>
+  <p class="notes">This is kinematics: motion only, no forces. It is called a point mass because all the mass sits at one point;
+  today we do not even need the mass. Vehicle dynamics uses a standard frame: x forward along the car (longitudinal), y to
+  the driver's left (lateral), z up. This photo is taken from the car's left rear, so +y points toward us. Today the car moves along x only. Wheelbase: the distance
+  between the axles. Track width: the distance between the left and right wheels. Air drag grows with speed, so with drag
+  the acceleration is no longer constant.</p>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+  <h2>Constant acceleration assumption: velocity equation</h2>
+  <p class="why">At \(t = 0\) the car is at position \(x_0\) with speed \(v_0\). Acceleration \(a\) stays constant.</p>
+  <div class="deriv">
+    <div class="row"><div class="math">\( a = \dfrac{dv}{dt} \)</div><div class="why">definition of acceleration</div></div>
+    <div class="row step"><div class="math">\( a\,dt = dv \)</div><div class="why">multiply both sides by \(dt\)</div></div>
+    <div class="row step"><div class="math">\( \displaystyle\int_{0}^{t} a\,dt' = \int_{v_0}^{v} dv' \)</div><div class="why">integrate: time from 0 to \(t\), speed from \(v_0\) to \(v\)</div></div>
+    <div class="row step"><div class="math">\( a\,t = v - v_0 \)</div><div class="why">\(a\) is constant, so it comes out of the integral</div></div>
+    <div class="row step"><div class="math result">\( v = v_0 + a\,t \qquad (1) \)</div><div class="why">speed changes linearly in time</div></div>
+  </div>
+  <div class="workspace" style="--h: .6in" aria-hidden="true"></div>
+  <p class="notes">The prime on \(t'\) and \(v'\) marks the variable of integration, so it does not clash with the limits \(t\)
+  and \(v\). Units check: m/s² times s is m/s.</p>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+  <h2>Constant acceleration assumption: position equation</h2>
+  <div class="deriv">
+    <div class="row"><div class="math">\( v = \dfrac{dx}{dt} \)</div><div class="why">definition of velocity</div></div>
+    <div class="row step"><div class="math">\( dx = v\,dt \)</div><div class="why">multiply both sides by \(dt\)</div></div>
+    <div class="row sub step"><div class="subst"><span class="math src">\( v = v_0 + a\,t \quad (1) \)</span>
+      <span class="arrow">put (1) in for \(v\)</span>
+      <span class="math">\( dx = \colorbox{#FCEFB4}{$(v_0 + a\,t)$}\,dt \)</span></div></div>
+    <div class="row step"><div class="math">\( \displaystyle\int_{x_0}^{x} dx' = \int_{0}^{t} (v_0 + a\,t')\,dt' \)</div><div class="why">integrate: position from \(x_0\) to \(x\)</div></div>
+    <div class="row step"><div class="math">\( x - x_0 = v_0\,t + \tfrac12 a\,t^2 \)</div><div class="why">\(v_0\) and \(a\) are constants</div></div>
+    <div class="row step"><div class="math result">\( x = x_0 + v_0\,t + \tfrac12 a\,t^2 \qquad (2) \)</div><div class="why">position is a parabola in time</div></div>
+  </div>
+  <div class="workspace" style="--h: .6in" aria-hidden="true"></div>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+  <h2>Constant acceleration: no time variable</h2>
+  <div class="deriv">
+    <div class="row sub"><div class="subst"><span class="math src">\( v = v_0 + a\,t \quad (1) \)</span>
+      <span class="arrow">solve for \(t\)</span>
+      <span class="math">\( t = \colorbox{#FCEFB4}{$\dfrac{v - v_0}{a}$} \)</span></div></div>
+    <div class="row sub step"><div class="subst one-line"><span class="math src">\( x = x_0 + v_0\,t + \tfrac12 a\,t^2 \quad (2) \)</span>
+      <span class="arrow">put \(t\) in</span>
+      <span class="math">\( x - x_0 = v_0 \colorbox{#FCEFB4}{$\left(\dfrac{v - v_0}{a}\right)$} + \dfrac12 a \colorbox{#FCEFB4}{$\left(\dfrac{v - v_0}{a}\right)^2$} \)</span></div></div>
+    <div class="row step"><div class="math">\( 2a\,(x - x_0) = 2 v_0 (v - v_0) + (v - v_0)^2 \)</div><div class="why">multiply both sides by \(2a\): the \(a\)'s cancel</div></div>
+    <div class="row step"><div class="math">\( 2a\,(x - x_0) = 2 v_0 v - 2 v_0^2 + v^2 - 2 v v_0 + v_0^2 \)</div><div class="why">expand the square</div></div>
+    <div class="row step"><div class="math">\( 2a\,(x - x_0) = v^2 - v_0^2 \)</div><div class="why">the \(v v_0\) terms cancel</div></div>
+    <div class="row step"><div class="math result">\( v^2 = v_0^2 + 2a\,(x - x_0) \qquad (3) \)</div><div class="why">speed and distance, no clock</div></div>
+  </div>
+  <div class="workspace" style="--h: .6in" aria-hidden="true"></div>
+</section>
+
+<!-- 12 -->
+<section class="slide">
+  <h2>Four equations, one assumption</h2>
+  <div class="two eqs">
+  <div class="deriv stack">
+    <div class="row"><div class="math"><span class="src">\( v = v_0 + a\,t \quad (1) \)</span></div><div class="why">speed is a straight line in time, so</div></div>
+    <div class="row step"><div class="math">\( \bar v = \dfrac{v_0 + v}{2} \)</div><div class="why">the average speed is the midpoint</div></div>
+    <div class="row step"><div class="math result">\( x = x_0 + \tfrac12 (v_0 + v)\,t \qquad (4) \)</div><div class="why">distance is average speed times time</div></div>
+    <div class="row step"><div class="subst"><span class="arrow">check: put (1) in for \(v\)</span>
+      <span class="math">\( x = x_0 + \tfrac12 \big(v_0 + \colorbox{#FCEFB4}{$v_0 + a t$}\big)\,t \)</span></div>
+      <div class="math">\( \phantom{x} = x_0 + \tfrac12 (2 v_0 + a t)\,t = x_0 + v_0 t + \tfrac12 a t^2 \)</div>
+      <div class="why">which is (2)</div></div>
+  </div>
+  <div class="rainbow step">
+  <table class="eqtable">
+    <caption>Pick the equation that leaves out what you do not know. <strong>All four hold only while \(a\) is constant.</strong></caption>
+    <thead><tr><th scope="col">Equation</th><th scope="col">Form</th><th scope="col">Leaves out</th></tr></thead>
+    <tbody>
+      <tr><td>(1)</td><td>\(v = v_0 + a t\)</td><td>\(x\)</td></tr>
+      <tr><td>(2)</td><td>\(x = x_0 + v_0 t + \tfrac12 a t^2\)</td><td>\(v\)</td></tr>
+      <tr><td>(3)</td><td>\(v^2 = v_0^2 + 2a(x - x_0)\)</td><td>\(t\)</td></tr>
+      <tr><td>(4)</td><td>\(x = x_0 + \tfrac12 (v_0 + v)\,t\)</td><td>\(a\)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  </div>
+</section>
+
+<!-- 13 -->
+<section class="slide worked-example">
+  <span class="example-label">Worked example 1</span>
+  <h2>Two ways to merge onto US-131</h2>
+  <figure class="merge" id="merge-static">
+    <div class="lane"><span class="who">A</span><img src="figures/car-mkz.png" alt="Car A, a gray Lincoln MKZ sedan, side view, facing right."><span class="how">20 m/s, speeds up at one constant rate \(a_A\)</span><span class="fin">30 m/s</span></div>
+    <div class="lane"><span class="who">B</span><img src="figures/car-mustang.png" alt="Car B, a red classic Ford Mustang, side view, facing right."><span class="how">holds 20 m/s for the first 100 m, then speeds up at 0.625 m/s²</span><span class="fin">30 m/s</span></div>
+    <div class="ruler" aria-hidden="true"><span>\(x = 0\)</span><span>\(x = 500\) m</span></div>
+  </figure>
+  <p class="lede">Both enter at 20 m/s (45 mph) and leave the 500 m merge lane at 30 m/s (67 mph).</p>
+  <ol class="qs">
+    <li>Car A: what constant acceleration \(a_A\) does it need? How long does the merge take?</li>
+    <li>Put car B's start and finish into the same equation. Does the answer describe car B?</li>
+    <li>Car B: how long does it hold 20 m/s? How far and how long does it speed up?</li>
+    <li>Which car reaches 500 m first, and by how much? What did you assume for car B?</li>
+  </ol>
+  <div class="workspace" style="--h: 3.2in" aria-hidden="true"></div>
+  <p class="notes">Car B is two constant-acceleration pieces, so equations (1) to (4) hold on each piece separately: the speed
+  and position at the end of the first piece are the start of the second. Holding a speed is the piece with \(a = 0\).</p>
+</section>
+
+<!-- 14 -->
+<section class="slide worked-example">
+  <span class="example-label">Worked example 1</span>
+  <h2>Watch the merge</h2>
+  <div class="screen-only interactive" data-fallback="merge-sketch">
+    <figure class="merge" id="merge-live" aria-label="Animation of the two cars merging, with their speed against time">
+      <div class="lane"><span class="who">A</span><img src="figures/car-mkz.png" alt=""><span class="fin" id="fin-A"></span></div>
+      <div class="lane"><span class="who">B</span><img src="figures/car-mustang.png" alt=""><span class="fin" id="fin-B"></span></div>
+      <div class="ruler" aria-hidden="true"><span>\(x = 0\)</span><span>\(x = 500\) m</span></div>
+    </figure>
+    <div class="two vt-row">
+      <svg class="vt" id="vt" viewBox="0 0 600 260" role="img" aria-labelledby="vt-title">
+        <title id="vt-title">Speed against time for car A and car B, drawn as the cars move</title>
+        <g id="vt-axes"></g><path id="vt-A" fill="none" stroke="#5E5650" stroke-width="4"/><path id="vt-B" fill="none" stroke="#C0392B" stroke-width="4"/>
+      </svg>
+      <div>
+        <div class="controls"><button class="btn" id="merge-play" type="button">Play</button><span>at twice real speed</span></div>
+        <p class="readout" id="merge-clock" aria-live="polite">t = 0.0 s</p>
+      </div>
+    </div>
+  </div>
+  <figure class="print-only" id="merge-sketch">
+    <svg viewBox="0 0 600 260" role="img" aria-labelledby="ms-title">
+      <title id="ms-title">Blank axes: speed from 0 to 35 meters per second against time from 0 to 22 seconds</title>
+      <g id="ms-axes"></g>
+    </svg>
+    <figcaption>Sketch \(v(t)\) for both cars. What is the area under each line?</figcaption>
+  </figure>
+  <p class="notes">Play it after working the example. The clock and each car's finish time come from equations (1) and (2),
+  applied piece by piece.</p>
+</section>
+
+<!-- 15 -->
+<section class="slide" style="break-inside: avoid">
+  <h2>A stop is well modeled by constant acceleration</h2>
+  <div class="two">
+    <div class="deriv tight">
+      <p class="why">Name it: the <strong>braking deceleration</strong> \(a_b &gt; 0\), so \(a = -a_b\).</p>
+      <div class="subst step"><span class="math src">\( v^2 = v_0^2 + 2a\,(x - x_0) \quad (3) \)</span></div>
+      <div class="subst step"><span class="arrow">stopped: \(v = 0\), \(a = -a_b\), \(x - x_0 = d\)</span>
+        <span class="math">\( 0 = v_0^2 - 2\,a_b\,d \)</span></div>
+      <p class="math result step">\( d = \dfrac{v_0^2}{2\,a_b} \)</p>
+    </div>
+    <figure class="squared">
+      <svg viewBox="0 0 560 330" role="img" aria-labelledby="sq-title sq-desc">
+        <title id="sq-title">Stopping distance at 30 and 60 mph, braking deceleration 8 meters per second squared</title>
+        <desc id="sq-desc">Two bars to scale. At 30 miles per hour, 13.4 meters per second, the car stops in 11.2 meters. At 60
+        miles per hour, 26.8 meters per second, it needs 45.0 meters. Twice the speed, four times the distance.</desc>
+        <text x="20" y="24" font-size="19" fill="#5E5650">Hard braking on dry pavement, <tspan font-style="italic">a</tspan><tspan font-size="14" dy="5">b</tspan><tspan dy="-5"> ≈ 8 m/s²</tspan></text>
+        <line x1="20" y1="290" x2="540" y2="290" stroke="#5E5650" stroke-width="2"/>
+        <g id="sq-ticks"></g>
+        <g class="step">
+          <text x="20" y="60" font-size="22" font-weight="700" fill="#532E1F">30 mph (13.4 m/s)</text>
+          <rect x="20" y="75" width="112" height="44" rx="6" fill="#C9A200"/>
+          <text x="145" y="106" font-size="22" font-weight="700" fill="#532E1F">11.2 m</text>
+        </g>
+        <g class="step">
+          <text x="20" y="170" font-size="22" font-weight="700" fill="#532E1F">60 mph (26.8 m/s)</text>
+          <rect x="20" y="185" width="450" height="44" rx="6" fill="#532E1F"/>
+          <text x="460" y="216" font-size="22" font-weight="700" fill="#fff" text-anchor="end">45.0 m</text>
+          <text x="20" y="270" font-size="21" fill="#1F1A17">Twice the speed, <tspan font-weight="700">four times</tspan> the distance.</text>
+        </g>
+      </svg>
+    </figure>
+  </div>
+  <p class="notes">Most motions are not constant acceleration: a car speeding up loses acceleration as it gains speed, and air
+  drag grows with the square of speed. A hard stop is the exception, which is why equation (3) works so well here. Distance
+  grows with the square of speed, which is most of what automatic emergency braking needs to know.</p>
+</section>
+
+<!-- 16 -->
+<section class="slide">
+  <h2>What sets the braking deceleration? Tire friction</h2>
+  <div class="two fbdrow">
+    <figure class="fbd">
+      <svg viewBox="0 0 520 380" role="img" aria-labelledby="fbd-title fbd-desc">
+        <title id="fbd-title">Free-body diagram of the braking point mass</title>
+        <desc id="fbd-desc">A point mass m on flat road, moving to the right with speed v. Weight m g acts down, the road's normal
+        force N acts up, and tire friction mu N acts backward, to the left, at the road. Air drag and rolling resistance are
+        drawn dashed and ignored.</desc>
+        <line x1="20" y1="250" x2="500" y2="250" stroke="#5E5650" stroke-width="3"/>
+        <circle cx="260" cy="190" r="34" fill="#532E1F"/><text x="260" y="198" text-anchor="middle" font-size="24" font-weight="700" fill="#fff">m</text>
+        <line x1="300" y1="120" x2="420" y2="120" stroke="#5E5650" stroke-width="4" marker-end="url(#fa-g)"/>
+        <text x="430" y="128" font-size="24" fill="#5E5650">v</text>
+        <line x1="260" y1="228" x2="260" y2="345" stroke="#532E1F" stroke-width="5" marker-end="url(#fa-b)"/>
+        <text x="272" y="340" font-size="26" fill="#532E1F" font-style="italic">mg</text>
+        <line x1="330" y1="250" x2="330" y2="80" stroke="#532E1F" stroke-width="5" marker-end="url(#fa-b)"/>
+        <text x="342" y="92" font-size="26" fill="#532E1F" font-style="italic">N</text>
+        <line x1="240" y1="268" x2="90" y2="268" stroke="#C9A200" stroke-width="6" marker-end="url(#fa-y)"/>
+        <text x="90" y="305" font-size="26" fill="#1F1A17"><tspan font-style="italic">μN</tspan>, tire friction</text>
+        <line x1="222" y1="170" x2="120" y2="170" stroke="#8A817B" stroke-width="3" stroke-dasharray="8 6"/>
+        <text x="40" y="150" font-size="19" fill="#5E5650">drag, rolling: ignored</text>
+        <defs>
+          <marker id="fa-b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0L10 5L0 10z" fill="#532E1F"/></marker>
+          <marker id="fa-y" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0L10 5L0 10z" fill="#C9A200"/></marker>
+          <marker id="fa-g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0L10 5L0 10z" fill="#5E5650"/></marker>
+        </defs>
+      </svg>
+    </figure>
+    <div class="deriv stack">
+      <div class="row"><div class="math">\( m\,a = -\mu N \)</div><div class="why">Newton's second law along \(x\); friction points backward. \(\mu\): tire-road friction coefficient, all of it used in hard braking.</div></div>
+      <div class="row step"><div class="math">\( m\,a_b = \mu\, m g \)</div><div class="why">put in \(a = -a_b\), and \(N = mg\) on a flat road</div></div>
+      <div class="row step"><div class="math result">\( a_b = \mu\, g \qquad \mu = \dfrac{a_b}{g} \)</div><div class="why">the mass cancels: the point mass is enough. \(g = 9.81\) m/s².</div></div>
+      <div class="row step"><div class="math result">\( d = \dfrac{v_0^2}{2\,\mu\, g} \)</div><div class="why">dry asphalt, \(\mu \approx 0.8\), so \(a_b \approx 8\) m/s². Measure \(d\), back out \(\mu\).</div></div>
+    </div>
+  </div>
+  <p class="notes">\(\mu\) is the friction coefficient between tire and road, \(g = 9.81\) m/s². This is Newton's second law
+  and Coulomb friction from physics, nothing more. It assumes all four tires brake at their friction limit (anti-lock brakes
+  keep them close to it) on a flat road. Wet asphalt is about 0.5, snow about
+  0.2.</p>
+</section>
+
+<!-- 17 -->
+<section class="slide">
+  <h2>Friday's lab: how much grip do CARLA's tires have?</h2>
+  <p class="task-line"><strong>Task:</strong> CARLA, the driving simulator we use in lab, never tells you its tire friction \(\mu\). Measure it.</p>
+  <div class="two fitrow">
+    <div class="screen-only interactive" data-fallback="fit-fig">
+      <svg class="fit" id="fit" viewBox="0 0 700 430" role="img" aria-labelledby="fit-title fit-desc">
+        <title id="fit-title">Stopping distance against initial speed: six measured CARLA stops and the theory curve</title>
+        <desc id="fit-desc">Six CARLA stops from 5 to 30 meters per second, drawn as yellow dots. The theory curve d equals v
+        squared over 2 mu g is drawn for the chosen friction coefficient mu. At mu equals 0.71 it passes through the stops from
+        15 meters per second up.</desc>
+        <g id="fit-axes"></g>
+        <path id="fit-curve" fill="none" stroke="#532E1F" stroke-width="3"/>
+        <g id="fit-pts"></g>
+        <g id="fit-key"></g>
+      </svg>
+      <div class="controls">
+        <label for="fit-mu">\(\mu\)</label>
+        <input id="fit-mu" type="range" min="0.40" max="1.00" step="0.01" value="0.50" style="width: 9em">
+        <output id="fit-mu-out" for="fit-mu"></output>
+      </div>
+      <p class="readout" id="fit-ab"></p>
+      <p class="readout" id="fit-err" aria-live="polite"></p>
+    </div>
+    <figure class="print-only" id="fit-fig">
+      <img src="figures/stopping-distance.png" alt="Plot of stopping distance against initial speed. Six measured CARLA stops from 5 to 30 meters per second, and the theory curve d equals v squared over 2 mu g with fitted mu equal to 0.71. The curve passes through the stops from 15 meters per second up. At 5 and 10 meters per second CARLA needs more distance than predicted.">
+    </figure>
+    <div class="tight">
+      <p><strong>Dots:</strong> measured. CARLA's Lincoln MKZ brakes fully from each starting speed \(v_0\), and we record the distance \(d\).</p>
+      <p class="step"><strong>Curve:</strong> constant acceleration theory. Pick \(\mu\), compute \(d = v_0^2 / (2\mu g)\) for every
+      \(v_0\) from 0 to 32 m/s in small steps, and join the points.</p>
+      <pre class="step snippet"><code>v0 = np.linspace(0, 32, 65)   # m/s
+d = v0**2 / (2 * mu * 9.81)   # m</code></pre>
+    </div>
+  </div>
+  <p class="notes">The best fit to the four fastest stops (least squares) is \(a_b = 7.0\)
+  m/s², so \(\mu = 7.0 / 9.81 = 0.71\). Strictly this is the friction the tires used, which is at most the friction they
+  have. Below 15 m/s CARLA needs more distance than the curve: at 5 m/s, 3.3 m against 1.8 m. The deceleration is not
+  constant through a short stop, so equation (3) does not hold exactly.</p>
+</section>
+
+<!-- 18 -->
+<section class="slide">
+  <h2>Credits</h2>
+  <ul class="credits">
+    <li>Photos from Wikimedia Commons and Flickr, unmodified apart from resizing. Each keeps its own license.</li>
+    <li>Freeway at rush hour: Prayitno, CC BY 2.0. Denver parking lot: Heath Alseike, CC BY 2.0.</li>
+    <li>2011 Toyota Corolla: NHTSA, public domain. Ferrari factory, Maranello: CAPTAIN RAJU, CC BY-SA 4.0.</li>
+    <li>Michigan vanity plate: Dwight Burdette, CC BY 3.0. "Road Trip Sing-a-long": nikoretro, Flickr, CC BY-SA 2.0.</li>
+    <li>Speed limit 100, Highway 402, Ontario: Ken Lund, CC BY-SA 2.0. Stadium Drive, Kalamazoo: SydneySmith, CC BY-SA 4.0.</li>
+    <li>Lincoln MKZ: Dinkun Chen, CC BY-SA 4.0.</li>
+    <li>CARLA images, including the two cars in the worked example, rendered by the course; CARLA assets are CC BY 4.0. Braking data: CARLA 0.9.16, vehicle.lincoln.mkz_2020.</li>
+    <li>The WMU logo is a registered trademark of Western Michigan University and is not covered by this lecture's license. The two-car example is from the Spring 2026 offering.</li>
+    <li>© 2027 Zachary D. Asher. The rest of this lecture is licensed CC BY 4.0: reuse it with credit. Its code is Apache-2.0.</li>
+  </ul>
+  <p class="notes muted">Full source links for every photo are in this week's README.</p>
+</section>
+
+</main>
+
+<script>
+(function () {
+  const MPH = 0.44704;
+  const $ = id => document.getElementById(id);
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, text) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    return e;
+  };
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.querySelectorAll(".arrow").forEach(a => a.innerHTML = `<span>${a.innerHTML.trim()}</span>`);
+  document.querySelectorAll(".arrow").forEach(a => a.insertAdjacentHTML("beforeend",
+    `<svg viewBox="0 0 120 20" aria-hidden="true"><line x1="2" y1="10" x2="104" y2="10" stroke="#5E5650" stroke-width="3"/><path d="M102 3L118 10L102 17z" fill="#5E5650"/></svg>`));
+
+  // ---------- did you know: guess, lock in, reveal ----------
+  (function () {
+    // [file, alt text, crop]; credits are on the last slide
+    const photos = {
+      traffic: ["photos/freeway-traffic.jpg", "Rush hour traffic filling every lane of a Los Angeles freeway."],
+      parking: ["photos/parking-lot.jpg", "Aerial view of a huge parking lot, rows of cars and empty spaces."],
+      toyota: ["photos/toyota-corolla.jpg", "The Toyota logo on the grille of a silver Corolla.", "inset(25% 0 16% 77.5%)"],
+      ferrari: ["photos/ferrari-factory.jpg", "The red brick Ferrari factory gate in Maranello, Italy."],
+      plate: ["photos/vanity-plate.jpg", "A Michigan vanity license plate reading VANITAS."],
+      sing: ["photos/singing-in-car.jpg", "Two friends in a convertible, both singing with their mouths wide open."]
+    };
+    const facts = [
+      { q: "How many registered motor vehicles are there in the United States?", min: 0, max: 300, step: 5, unit: "million",
+        ans: 285, show: "285 million", note: "About one for every person in the country.",
+        src: "self.inc, car ownership statistics", pics: ["traffic"] },
+      { q: "The United States has about 2 billion parking spots. How many is that per vehicle?", min: 0, max: 8, step: 0.5, unit: "per vehicle",
+        ans: 7, show: "about 7", note: "Most of them are empty most of the time.",
+        src: "Parking & Mobility magazine, April 2024", pics: ["parking"] },
+      { q: "Toyota builds about 27,000 cars a day. How many does Ferrari build?", min: 0, max: 20000, step: 1, unit: "a day",
+        ans: 38, show: "about 38", note: "13,752 cars in all of 2024. Toyota builds that many in half a day.",
+        src: "Ferrari 2024 annual results; Toyota, about 10 million vehicles a year", pics: ["toyota", "ferrari"], tags: ["27,000 a day", "?"] },
+      { q: "What share of owners name their car?", min: 0, max: 100, step: 5, unit: "%",
+        ans: 40, show: "40%", note: "On record: Purrrsilla, Big Bertha, The Slug, Oogie Boogie, Party Chicken.",
+        src: "New York Post, July 3, 2025", pics: ["plate"] },
+      { q: "What share of drivers admit to singing in the car?", min: 0, max: 100, step: 5, unit: "%",
+        ans: 90, show: "90%", note: "The other 10% are lying.",
+        src: "sunautoservice.com, car facts", pics: ["sing"] }
+    ];
+    const fmt = n => Number(n).toLocaleString("en-US");
+    // load every photo now so the reveal never waits
+    Object.values(photos).forEach(p => { const im = new Image(); im.src = p[0]; });
+    let i = 0;
+    const dots = $("dyk-dots");
+    facts.forEach(() => dots.appendChild(document.createElement("span")));
+    function showFact() {
+      const f = facts[i];
+      $("dyk-q").textContent = f.q;
+      const r = $("dyk-range"); r.min = f.min; r.max = f.max; r.step = f.step; r.value = Math.round((f.max * 0.4) / f.step) * f.step;
+      $("dyk-min").textContent = fmt(f.min); $("dyk-max").textContent = fmt(f.max);
+      guess(); $("dyk-guess-wrap").hidden = false; $("dyk-reveal").hidden = true;
+      const box = $("dyk-photos");
+      box.className = "dyk-photos" + (f.pics.length > 1 ? " pair" : "");
+      box.innerHTML = f.pics.map((k, j) => { const [src, alt, crop] = photos[k];
+        return `<figure><img src="${src}" alt="${alt}"${crop ? ` style="object-view-box: ${crop}"` : ""}>${f.tags ? `<span class="tag">${f.tags[j]}</span>` : ""}</figure>`; }).join("");
+      Array.from(dots.children).forEach((d, k) => d.classList.toggle("on", k === i));
+    }
+    function guess() { const f = facts[i]; $("dyk-guess").textContent = `${fmt($("dyk-range").value)} ${f.unit}`; }
+    function reveal() {
+      const f = facts[i];
+      $("dyk-guess-wrap").hidden = true; $("dyk-reveal").hidden = false;
+      $("dyk-note").textContent = f.note; $("dyk-src").textContent = "Source: " + f.src;
+      const tag = document.querySelectorAll("#dyk-photos .tag")[1];
+      if (tag) tag.textContent = "38 a day";
+      const a = $("dyk-answer");
+      if (reduce) { a.textContent = f.show; return; }
+      const start = performance.now(), dur = 900;
+      (function frame(now) {
+        const p = Math.max(0, Math.min(1, (now - start) / dur)), eased = 1 - Math.pow(1 - p, 3);
+        a.textContent = p < 1 ? `${Math.round(f.ans * eased)} ${f.unit}` : f.show;
+        if (p < 1) requestAnimationFrame(frame);
+      })(start);
+    }
+    $("dyk-range").addEventListener("input", guess);
+    $("dyk-lock").addEventListener("click", reveal);
+    $("dyk-next").addEventListener("click", () => { i = (i + 1) % facts.length; showFact(); });
+    showFact();
+  })();
+
+  // ---------- the five tools: drawn once, used on the timeline and on the course road ----------
+  const PICS = [
+    // PID: a feedback loop
+    `<rect x="-40" y="-20" width="80" height="40" rx="6" fill="#fff" stroke="#532E1F" stroke-width="3"/><text x="0" y="7" text-anchor="middle" font-size="18" font-weight="700" fill="#532E1F">PID</text>
+     <path d="M 40 0 H 65 V 45 H -65 V 0 H -40" fill="none" stroke="#C9A200" stroke-width="3"/><path d="M -46 -5 L -40 0 L -46 5" fill="none" stroke="#C9A200" stroke-width="3"/>`,
+    // KF: noisy dots, smooth line
+    `<path d="M -70 20 C -40 10 -10 -5 20 -10 S 60 -25 70 -30" fill="none" stroke="#C9A200" stroke-width="4"/>
+     ${[-65,-50,-35,-20,-5,10,25,40,55,68].map((x,k)=>`<circle cx="${x}" cy="${[28,2,22,-8,6,-22,-2,-30,-14,-36][k]}" r="4" fill="#532E1F"/>`).join("")}`,
+    // pure pursuit: path, car, lookahead arc
+    `<path d="M -70 40 Q 0 -10 70 -40" fill="none" stroke="#C9C2BD" stroke-width="5"/><circle cx="-45" cy="25" r="9" fill="#532E1F"/><circle cx="30" cy="-18" r="7" fill="#C9A200"/>
+     <path d="M -45 25 Q -5 30 30 -18" fill="none" stroke="#532E1F" stroke-width="3" stroke-dasharray="6 5"/>`,
+    // MPC: a horizon of predicted paths
+    `<circle cx="-55" cy="20" r="9" fill="#532E1F"/><path d="M -55 20 Q 0 20 60 -30" fill="none" stroke="#C9A200" stroke-width="4"/><path d="M -55 20 Q 0 10 60 -5" fill="none" stroke="#C9C2BD" stroke-width="3"/>
+     <path d="M -55 20 Q 0 30 60 20" fill="none" stroke="#C9C2BD" stroke-width="3"/><line x1="60" y1="-45" x2="60" y2="35" stroke="#5E5650" stroke-width="2" stroke-dasharray="4 4"/>`,
+    // layered stack
+    `<rect x="-62" y="-40" width="124" height="24" rx="4" fill="#F1C500"/><rect x="-62" y="-12" width="124" height="24" rx="4" fill="#532E1F"/><rect x="-62" y="16" width="124" height="24" rx="4" fill="#EDEAE7" stroke="#C9C2BD"/>
+     <text x="0" y="-22" text-anchor="middle" font-size="14" fill="#532E1F" font-weight="700">AI</text><text x="0" y="6" text-anchor="middle" font-size="14" fill="#fff" font-weight="700">estimation, control</text><text x="0" y="34" text-anchor="middle" font-size="14" fill="#1F1A17" font-weight="700">physics</text>`];
+  // [first year in a car you could buy, tool, where]
+  const ERAS = [
+    ["1958", "PID loops", "cruise control, Chrysler"],
+    ["1995", "Kalman filters", "stability control, Mercedes"],
+    ["2001", "Path tracking", "lane keeping, Nissan"],
+    ["2018", "MPC", "engine control, GM"],
+    ["2024", "End-to-end AI", "driver assistance, Tesla"]];
+
+  (function () {
+    const gEl = $("tl");
+    ERAS.forEach(([era, what, why], i) => {
+      const x = 100 + i * 200;
+      const grp = el("g", { class: i ? "step" : "" });
+      grp.innerHTML = `<g transform="translate(${x},130)">${PICS[i]}</g>
+        <circle cx="${x}" cy="240" r="13" fill="#F1C500" stroke="#532E1F" stroke-width="3"/>
+        <text x="${x}" y="290" text-anchor="middle" font-size="16" fill="#5E5650">${era}</text>
+        <text x="${x}" y="320" text-anchor="middle" font-size="22" font-weight="700" fill="#532E1F">${what}</text>
+        <text x="${x}" y="346" text-anchor="middle" font-size="16" fill="#5E5650">${why}</text>`;
+      gEl.appendChild(grp);
+    });
+  })();
+
+  // ---------- the course road, with each tool dropping onto its week ----------
+  (function () {
+    const TOPY = 54;
+    ERAS.forEach(([, what], i) => {
+      const x = 100 + i * 200;
+      $("map-top").insertAdjacentHTML("beforeend", `<g transform="translate(${x},${TOPY}) scale(.42)">${PICS[i]}</g>`);
+      $("map-top-labels").insertAdjacentHTML("beforeend", `<text x="${x}" y="98" text-anchor="middle" font-size="14" font-weight="700" fill="#8A6F62">${what}</text>`);
+    });
+    const stops = [["Point mass", "week 1", 40, 390, "start"], ["Kinematic bicycle", "weeks 2 to 4", 270, 371, "middle"],
+      ["Tires, dynamic bicycle", "weeks 5 to 7", 500, 355, "middle"], ["Control", "weeks 9 to 11", 730, 371, "middle"],
+      ["Friction limit", "weeks 12 and 13", 960, 390, "end"]];
+    const st = $("map-stops");
+    stops.forEach(([name, wk, x, y, anchor], i) => {
+      st.appendChild(el("circle", { cx: x, cy: y, r: i ? 13 : 19, fill: i ? "#F1C500" : "#532E1F", stroke: "#532E1F", "stroke-width": 3 }));
+      st.appendChild(el("text", { x, y: y + 54, "text-anchor": anchor, "font-size": 24, "font-weight": 700, fill: "#532E1F" }, name));
+      st.appendChild(el("text", { x, y: y + 80, "text-anchor": anchor, "font-size": 19, fill: "#5E5650" }, wk));
+    });
+    st.appendChild(el("text", { x: 40, y: 350, "font-size": 21, "font-weight": 700, fill: "#532E1F" }, "today"));
+    // [tool index, landing x, week label], in course order
+    const land = [[2, 195, "week 3"], [1, 340, "week 4"], [0, 615, "week 9"], [3, 760, "week 10"], [4, 900, "week 11"]];
+    land.forEach(([k, x, wk]) => {
+      const y = 235, fromX = 100 + k * 200;
+      const grp = el("g", { class: "step fly", style: `--dx: ${fromX - x}px; --dy: ${TOPY - y}px` });
+      grp.innerHTML = `<g transform="translate(${x},${y}) scale(.85)">${PICS[k]}</g>
+        <text x="${x}" y="${y + 62}" text-anchor="middle" font-size="18" font-weight="700" fill="#532E1F">${wk}</text>`;
+      $("map-tools").appendChild(grp);
+    });
+  })();
+
+  // ---------- speed gauges ----------
+  (function () {
+    const specs = [["mph", 90, 1], ["km/h", 145, 1.609344], ["m/s", 40, MPH]];
+    const wrap = $("gauges"), needles = [];
+    specs.forEach(([unit, max, k]) => {
+      const s = el("svg", { viewBox: "0 0 240 170", "aria-hidden": "true" });
+      let ticks = "";
+      const n = unit === "m/s" ? 8 : unit === "mph" ? 9 : 29;
+      for (let j = 0; j <= n; j++) {
+        const a = Math.PI * (1 - j / n), x1 = 120 + 95 * Math.cos(a), y1 = 140 - 95 * Math.sin(a), x2 = 120 + 108 * Math.cos(a), y2 = 140 - 108 * Math.sin(a);
+        const major = unit === "km/h" ? j % 4 === 0 : true;
+        ticks += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#5E5650" stroke-width="${major ? 3 : 1.5}"/>`;
+        if (major) ticks += `<text x="${120 + 80 * Math.cos(a)}" y="${140 - 80 * Math.sin(a) + 5}" text-anchor="middle" font-size="13" fill="#5E5650">${Math.round(max * j / n)}</text>`;
+      }
+      s.innerHTML = `<path d="M 12 140 A 108 108 0 0 1 228 140" fill="#FCEFB4" stroke="#532E1F" stroke-width="3"/>${ticks}
+        <line id="n-${unit}" x1="120" y1="140" x2="120" y2="45" stroke="#532E1F" stroke-width="5" stroke-linecap="round" style="transition: all .5s ease"/><circle cx="120" cy="140" r="8" fill="#532E1F"/>
+        <text x="120" y="166" text-anchor="middle" font-size="18" font-weight="700" fill="#532E1F"><tspan id="v-${unit}"></tspan> ${unit}</text>`;
+      wrap.appendChild(s);
+      needles.push([unit, max, k]);
+    });
+    function update(mph) {
+      for (const [unit, max, k] of needles) {
+        const v = mph * k, a = Math.PI * (1 - Math.min(v, max) / max);
+        $("n-" + unit).setAttribute("x2", 120 + 95 * Math.cos(a)); $("n-" + unit).setAttribute("y2", 140 - 95 * Math.sin(a));
+        $("v-" + unit).textContent = unit === "mph" ? v.toFixed(0) : v.toFixed(1);
+      }
+    }
+    $("sp").addEventListener("input", () => update(+$("sp").value));
+    document.querySelectorAll("[data-mph]").forEach(b => b.addEventListener("click", () => {
+      const mph = +b.dataset.mph; $("sp").value = Math.round(mph); update(mph);
+    }));
+    update(62.15);
+  })();
+
+  // ---------- two ways to merge: animation and speed against time ----------
+  (function () {
+    // car A: one constant acceleration; car B: holds 20 m/s for 100 m, then 0.625 m/s² to reach 30 m/s at 500 m
+    const aA = (30 * 30 - 20 * 20) / (2 * 500), aB = 0.625, tB1 = 100 / 20;
+    const cars = {
+      A: { T: 10 / aA, x: t => 20 * t + aA * t * t / 2, v: t => 20 + aA * t },
+      B: { T: tB1 + 10 / aB, x: t => t < tB1 ? 20 * t : 100 + 20 * (t - tB1) + aB * (t - tB1) ** 2 / 2, v: t => t < tB1 ? 20 : 20 + aB * (t - tB1) }
+    };
+    const L = 60, R = 580, T = 20, B = 210, TMAX = 22, VMAX = 35;
+    const sx = t => L + (R - L) * t / TMAX, sy = v => B - (B - T) * v / VMAX;
+    function axes(g) {
+      g.appendChild(el("line", { x1: L, y1: B, x2: R, y2: B, stroke: "#5E5650", "stroke-width": 1.5 }));
+      g.appendChild(el("line", { x1: L, y1: T, x2: L, y2: B, stroke: "#5E5650", "stroke-width": 1.5 }));
+      for (let t = 0; t <= 20; t += 5) { g.appendChild(el("line", { x1: sx(t), y1: T, x2: sx(t), y2: B, stroke: "#EDEAE7" })); g.appendChild(el("text", { x: sx(t), y: B + 22, "text-anchor": "middle", "font-size": 17, fill: "#5E5650" }, t)); }
+      for (let v = 0; v <= 30; v += 10) { g.appendChild(el("line", { x1: L, y1: sy(v), x2: R, y2: sy(v), stroke: "#EDEAE7" })); g.appendChild(el("text", { x: L - 8, y: sy(v) + 6, "text-anchor": "end", "font-size": 17, fill: "#5E5650" }, v)); }
+      g.appendChild(el("text", { x: (L + R) / 2, y: B + 46, "text-anchor": "middle", "font-size": 18 }, "time t (s)"));
+      g.appendChild(el("text", { x: 16, y: (T + B) / 2, "text-anchor": "middle", "font-size": 18, transform: `rotate(-90 16 ${(T + B) / 2})` }, "speed v (m/s)"));
+    }
+    axes($("vt-axes")); axes($("ms-axes"));
+    const tagA = el("text", { "font-size": 20, "font-weight": 700, fill: "#5E5650" }, "A"), tagB = el("text", { "font-size": 20, "font-weight": 700, fill: "#C0392B" }, "B");
+    $("vt").append(tagA, tagB);
+    const tags = { A: [tagA, -10], B: [tagB, 26] };
+    const imgs = $("merge-live").querySelectorAll("img");
+    function draw(t) {
+      ["A", "B"].forEach((k, i) => {
+        const c = cars[k], tk = Math.min(t, c.T), lane = imgs[i].parentElement;
+        const run = lane.clientWidth - imgs[i].offsetWidth - imgs[i].offsetLeft - 8;
+        imgs[i].style.setProperty("--x", `${(run * c.x(tk) / 500).toFixed(1)}px`);
+        let d = "";
+        for (let s = 0; s <= tk + 1e-9; s += 0.1) d += (s ? "L" : "M") + sx(s).toFixed(1) + " " + sy(c.v(s)).toFixed(1) + " ";
+        $("vt-" + k).setAttribute("d", d);
+        const [tg, dy] = tags[k];
+        tg.setAttribute("x", (sx(tk) + 6).toFixed(1)); tg.setAttribute("y", (sy(c.v(tk)) + dy).toFixed(1));
+        $("fin-" + k).textContent = t >= c.T ? `${c.T.toFixed(1)} s` : "";
+      });
+      $("merge-clock").textContent = `t = ${t.toFixed(1)} s`;
+    }
+    let raf = null;
+    $("merge-play").addEventListener("click", () => {
+      cancelAnimationFrame(raf);
+      const end = Math.max(cars.A.T, cars.B.T);
+      if (reduce) { draw(end); return; }
+      const t0 = performance.now();
+      (function frame(now) {
+        const t = Math.max(0, Math.min(end, 2 * (now - t0) / 1000));
+        draw(t);
+        if (t < end) raf = requestAnimationFrame(frame);
+      })(t0);
+    });
+    draw(0);
+  })();
+
+  // ---------- 30 vs 60 mph bars: ticks in meters ----------
+  (function () {
+    const t = $("sq-ticks"), X = 10;                     // 10 px per meter, bars start at x = 20
+    for (let m = 0; m <= 50; m += 10) {
+      t.appendChild(el("line", { x1: 20 + m * X, y1: 286, x2: 20 + m * X, y2: 296, stroke: "#5E5650" }));
+      t.appendChild(el("text", { x: 20 + m * X, y: 318, "text-anchor": "middle", "font-size": 16, fill: "#5E5650" }, m === 50 ? "50 m" : m));
+    }
+  })();
+
+  // ---------- CARLA fit ----------
+  (function () {
+    const pts = [[5.03, 3.26], [10.02, 9.50], [15.04, 17.41], [20.02, 28.49], [25.00, 44.46], [30.02, 64.09]];   // figures/carla-brake-sweep.json
+    const L = 70, R = 680, T = 20, B = 370, VMAX = 32, DMAX = 80;
+    const sx = v => L + (R - L) * v / VMAX, sy = d => B - (B - T) * d / DMAX;
+    const ax = $("fit-axes");
+    ax.appendChild(el("line", { x1: L, y1: B, x2: R, y2: B, stroke: "#5E5650", "stroke-width": 1.5 }));
+    ax.appendChild(el("line", { x1: L, y1: T, x2: L, y2: B, stroke: "#5E5650", "stroke-width": 1.5 }));
+    for (let v = 0; v <= 30; v += 5) { ax.appendChild(el("line", { x1: sx(v), y1: T, x2: sx(v), y2: B, stroke: "#EDEAE7" })); ax.appendChild(el("text", { x: sx(v), y: B + 22, "text-anchor": "middle", class: "axis", "font-size": 20 }, v)); }
+    for (let d = 0; d <= 80; d += 20) { ax.appendChild(el("line", { x1: L, y1: sy(d), x2: R, y2: sy(d), stroke: "#EDEAE7" })); ax.appendChild(el("text", { x: L - 10, y: sy(d) + 5, "text-anchor": "end", class: "axis", "font-size": 20 }, d)); }
+    ax.appendChild(el("text", { x: (L + R) / 2, y: B + 48, "text-anchor": "middle", "font-size": 21 }, "initial speed (m/s)"));
+    ax.appendChild(el("text", { x: 18, y: (T + B) / 2, "text-anchor": "middle", "font-size": 21, transform: `rotate(-90 18 ${(T + B) / 2})` }, "stopping distance (m)"));
+    for (const [v, d] of pts) {
+      $("fit-pts").appendChild(el("circle", { cx: sx(v), cy: sy(d), r: 7, fill: "#F1C500", stroke: "#532E1F", "stroke-width": 2 }));
+      const left = v < 7 || v > 27;                      // keep the end labels off the axis and inside the plot
+      $("fit-pts").appendChild(el("text", { x: sx(v) + (left ? -12 : 11), y: sy(d) + (v < 7 ? -12 : 24), "text-anchor": left ? "end" : "start",
+        "font-size": 18, fill: "#5E5650" }, `v₀ = ${Math.round(v)} m/s`));
+    }
+    function fit() {
+      const mu = +$("fit-mu").value, a = mu * 9.81;
+      $("fit-mu-out").textContent = mu.toFixed(2);
+      $("fit-ab").innerHTML = `<i>a</i><sub>b</sub> = <i>μg</i> = ${a.toFixed(1)} m/s²`;
+      let path = "";
+      for (let v = 0; v <= VMAX; v += 0.5) { const d = v * v / (2 * a); if (d > DMAX) break; path += (v === 0 ? "M" : "L") + sx(v).toFixed(1) + " " + sy(d).toFixed(1) + " "; }
+      $("fit-curve").setAttribute("d", path);
+      const fast = pts.filter(p => p[0] >= 15);
+      const rms = Math.sqrt(fast.reduce((s, [v, d]) => s + (v * v / (2 * a) - d) ** 2, 0) / fast.length);
+      $("fit-err").textContent = `curve misses the four fastest dots by about ${rms.toFixed(1)} m`;
+    }
+    const key = $("fit-key");
+    key.appendChild(el("circle", { cx: 100, cy: 40, r: 7, fill: "#F1C500", stroke: "#532E1F", "stroke-width": 2 }));
+    key.appendChild(el("text", { x: 116, y: 47, "font-size": 20 }, "CARLA: measured stops"));
+    key.appendChild(el("line", { x1: 88, y1: 74, x2: 112, y2: 74, stroke: "#532E1F", "stroke-width": 3 }));
+    key.appendChild(el("text", { x: 116, y: 81, "font-size": 20 }, "theory: d = v₀² / (2μg)"));
+    $("fit-mu").addEventListener("input", fit); fit();
+  })();
+})();
+</script>
+</body>
+</html>

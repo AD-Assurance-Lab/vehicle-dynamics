@@ -28,7 +28,7 @@ The `.gitignore` is an allowlist. Do not widen it to make a file commit.
   Never merge draft into main: its history holds unfinished versions.
 - GitHub Actions builds every PDF, requires veraPDF PASS and working links,
   then deploys main. A link to an unpublished page fails the build.
-- Not yet public (Zach revising): the syllabus and Lecture 1A.
+- Not yet public (Zach revising): the syllabus and Lab 1. Lecture 1A was published 2026-10-29.
 
 ## Building content
 - Lectures are single HTML files in `lectures/wkNN-topic/` using `common/kit/`
@@ -42,6 +42,8 @@ The `.gitignore` is an allowlist. Do not widen it to make a file commit.
   every figure source, passes the accessibility check in `docs/ACCESSIBILITY.md`,
   and builds cleanly.
 - Writing: short sentences, no em dashes.
+- Before Zach reviews a lecture or lab, run the `student-reviewer` agent
+  (`.claude/agents/`, local only) and bring its findings with yours.
 
 ## Commits
 - Lab conventions apply (`../CONVENTIONS.md`): subject <= 72 chars, body <= 15 lines.
