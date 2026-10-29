@@ -201,8 +201,11 @@
     <p class="meta">Lecture 1A, Monday, January 11, 2027</p>
     <p class="logo"><img src="../../common/brand/wmu-logo-horizontal.png" alt="Western Michigan University"></p>
   </div>
-  <p class="notes muted">This handout is the complete notes for the lecture. Write your work in the boxes and blanks.
+  <p class="print-only muted">This handout is the notes for the lecture. Write your work in the boxes and blanks.
   Group-example solutions are posted on eLearning after class, and quiz problems look like them.</p>
+  <p class="print-only muted" style="font-size:.8em">© 2027 Zachary D. Asher, CC BY 4.0. Photo credits and licenses:
+  github.com/AD-Assurance-Lab/vehicle-dynamics, file lectures/wk01-point-mass/README.md. The WMU logo is a registered
+  trademark of Western Michigan University and is not covered by this license.</p>
 </section>
 
 <!-- 2 -->
@@ -230,15 +233,14 @@
     </div>
   </div>
   <div class="print-only" id="dyk-print">
+    <p>Write your guess, then the answer.</p>
     <ol>
-      <li>There are about 285 million registered motor vehicles in the United States: about one for every person.</li>
-      <li>There are about 2 billion parking spots in the United States, about 7 for every vehicle.</li>
-      <li>Toyota builds about 27,000 cars a day. Ferrari builds about 38.</li>
-      <li>40% of owners name their car. Examples on record: Purrrsilla, Big Bertha, The Slug, Party Chicken.</li>
-      <li>90% of drivers admit to singing in the car.</li>
+      <li>How many registered motor vehicles are there in the United States? Guess ________ Answer ________</li>
+      <li>The United States has about 2 billion parking spots. How many is that per vehicle? Guess ________ Answer ________</li>
+      <li>Toyota builds about 27,000 cars a day. How many does Ferrari build? Guess ________ Answer ________</li>
+      <li>What share of owners name their car? Guess ________ Answer ________</li>
+      <li>What share of drivers admit to singing in the car? Guess ________ Answer ________</li>
     </ol>
-    <p class="muted" style="font-size:.8em">Sources: self.inc car-ownership statistics; Parking &amp; Mobility magazine, April 2024;
-    Ferrari 2024 annual results; New York Post, July 3, 2025; sunautoservice.com car facts.</p>
   </div>
   <p class="notes">Cars are everywhere, people love them, and nearly every one of them is now steered, braked and
   accelerated by software. That software has to respect physics.</p>
@@ -316,7 +318,7 @@
         <p class="chain">\( \dfrac{100\ \text{km}}{1\ \text{h}} \times \dfrac{1000\ \text{m}}{1\ \text{km}} \times \dfrac{1\ \text{h}}{3600\ \text{s}} \)</p>
         <p class="chain step">\( \dfrac{100\ \cancel{\text{km}}}{1\ \cancel{\text{h}}} \times \dfrac{1000\ \text{m}}{1\ \cancel{\text{km}}} \times \dfrac{1\ \cancel{\text{h}}}{3600\ \text{s}} = \) <span class="ans">27.8 m/s</span><span class="blank">________</span></p>
       </div></div>
-      <p class="step verdict">A Michigan freeway, 70 mph, is 113 km/h. Ontario's highways run a little slower.</p>
+      <p class="step verdict no-print">A Michigan freeway, 70 mph, is 113 km/h. Ontario's highways run a little slower.</p>
     </div>
   </div>
   <div class="workspace" style="--h: 1in" aria-hidden="true"></div>
@@ -342,7 +344,7 @@
         <p class="chain">\( \dfrac{126\ \text{km}}{1\ \text{h}} \times \dfrac{1\ \text{mi}}{1.609\ \text{km}} \)</p>
         <p class="chain step">\( \dfrac{126\ \cancel{\text{km}}}{1\ \text{h}} \times \dfrac{1\ \text{mi}}{1.609\ \cancel{\text{km}}} = \) <span class="ans">78.3 mi/h</span><span class="blank">________</span></p>
       </div></div>
-      <p class="step verdict">Freeway speed, so no: this test belongs on a closed track, or in CARLA, the driving simulator we use in lab.</p>
+      <p class="step verdict no-print">Freeway speed, so no: this test belongs on a closed track, or in CARLA, the driving simulator we use in lab.</p>
     </div>
   </div>
   <div class="workspace" style="--h: 1in" aria-hidden="true"></div>
@@ -428,7 +430,7 @@
   <div class="deriv">
     <div class="row"><div class="math">\( a = \dfrac{dv}{dt} \)</div><div class="why">definition of acceleration</div></div>
     <div class="row step"><div class="math">\( a\,dt = dv \)</div><div class="why">multiply both sides by \(dt\)</div></div>
-    <div class="row step"><div class="math">\( \displaystyle\int_{0}^{t} a\,dt' = \int_{v_0}^{v} dv' \)</div><div class="why">integrate: time from 0 to \(t\), speed from \(v_0\) to \(v\)</div></div>
+    <div class="row step"><div class="math">\( \displaystyle\int_{0}^{t} a\,dt' = \int_{v_0}^{v} dv' \)</div><div class="why">integrate: time from 0 to \(t\), speed from \(v_0\) to \(v\). The prime marks the variable of integration.</div></div>
     <div class="row step"><div class="math">\( a\,t = v - v_0 \)</div><div class="why">\(a\) is constant, so it comes out of the integral</div></div>
     <div class="row step"><div class="math result">\( v = v_0 + a\,t \qquad (1) \)</div><div class="why">speed changes linearly in time</div></div>
   </div>
@@ -657,7 +659,8 @@
       <p class="readout" id="fit-err" aria-live="polite"></p>
     </div>
     <figure class="print-only" id="fit-fig">
-      <img src="figures/stopping-distance.png" alt="Plot of stopping distance against initial speed. Six measured CARLA stops from 5 to 30 meters per second, and the theory curve d equals v squared over 2 mu g with fitted mu equal to 0.71. The curve passes through the stops from 15 meters per second up. At 5 and 10 meters per second CARLA needs more distance than predicted.">
+      <img src="figures/carla-stops.png" alt="Plot of stopping distance against initial speed: six measured CARLA stops at 5, 10, 15, 20, 25 and 30 meters per second, with stopping distances growing faster than linearly. No theory curve is drawn.">
+      <figcaption>Sketch the theory curve for your \(\mu\). \(\mu\) = ________</figcaption>
     </figure>
     <div class="tight">
       <p><strong>Dots:</strong> measured. CARLA's Lincoln MKZ brakes fully from each starting speed \(v_0\), and we record the distance \(d\).</p>
@@ -674,7 +677,7 @@ d = v0**2 / (2 * mu * 9.81)   # m</code></pre>
 </section>
 
 <!-- 18 -->
-<section class="slide">
+<section class="slide no-print">
   <h2>Credits</h2>
   <ul class="credits">
     <li>Photos from Wikimedia Commons and Flickr, unmodified apart from resizing. Each keeps its own license.</li>

@@ -14,7 +14,7 @@ Lab (Friday): `../../labs/wk01-braking/`.
 |---|---|
 | `figures/car-mkz.png`, `figures/car-mustang.png` | Rendered by the course from CARLA 0.9.16 (`env/carla-vd-tests/side_views.py`); background removed with CARLA's semantic camera. CARLA assets are CC BY 4.0. |
 | `figures/carla-wet-road.png`, `figures/carla-lead-following.png` | Rendered by the course from CARLA 0.9.16. CARLA assets are CC BY 4.0. |
-| `figures/stopping-distance.png`, `figures/braking-trace.png` | `figures/make_figures.py` from `figures/carla-brake-sweep.json` (CARLA 0.9.16, `vehicle.lincoln.mkz_2020`, `env/carla-vd-tests/brake_sweep.py`). |
+| `figures/carla-stops.png`, `figures/stopping-distance.png`, `figures/braking-trace.png` | `figures/make_figures.py` from `figures/carla-brake-sweep.json` (CARLA 0.9.16, `vehicle.lincoln.mkz_2020`, `env/carla-vd-tests/brake_sweep.py`). |
 | `figures/fbd-point-mass.png`, `figures/vehicle-frames.png` | `figures/make_figures.py`. Not used by the current lecture; kept for 1B and week 2. |
 | Inline SVG (timeline, course road, gauges, point-mass overlay, merge speed graph, stopping bars, free-body diagram, CARLA fit) | Drawn in the lecture file. Apache-2.0. |
 | `../../common/brand/wmu-logo-horizontal.png` | WMU long horizontal logo, from wmich.edu/marcom/creative/visual-identity/logo (2026 digital PNG, resized). Registered trademark, used as the university's own faculty per its visual identity guide. Excluded from the course licenses. |
@@ -41,14 +41,14 @@ The CC BY-SA photos are shown unmodified beside the lecture, not adapted into it
 The point-mass overlay on the MKZ is a separate SVG layer over the unmodified photo. The Toyota photo is cropped on screen to its grille logo with CSS; the file is unmodified.
 
 ## Content lineage
-- "Did you know" facts and the era table: Spring 2026 Lec1. The 2026 photos were not reused (no license on record); the slide uses licensed Commons photos. The Ferrari and Toyota numbers were updated in 2026-10 to Ferrari's 2024 results (13,752 cars, about 38 a day) and Toyota's
-  roughly 10 million a year (about 27,000 a day); the 2026 figures (13,000 and 14 a day) were out of date.
+- "Did you know" facts and the era table: Spring 2026 Lec1. The 2026 photos were not reused (no license on record); the slide uses licensed Commons photos. The Ferrari and Toyota numbers were updated in 2026-10 to Ferrari's 2024 results and Toyota's
+  yearly production; the 2026 figures were out of date.
 - Speed-feel group example: 2024 to 2026 (now an Ontario 100 km/h sign and a 35 m/s test on Stadium Drive).
 - Point mass, standard frame and the four constant-acceleration derivations: Spring 2026 Lec3 handwritten notes, page 1.
-- Two ways to merge: the Spring 2026 Lec3 two-car worked example (page 2), with car B changed so the steady car A wins by 1.0 s.
+- Two ways to merge: the Spring 2026 Lec3 two-car worked example (page 2), with car B changed so the race is close.
 - Stadium Drive and Bronco Mart problem: Spring 2026 Lec14. Parked for week 7.
 - Nissan Leaf 90° turn: Spring 2026 Lec3 group example. Opens week 2 (it is in this file's git history).
-- Braking data and the CARLA fit: new for 2027. The fit gives a braking deceleration of 7.0 m/s², so mu = 0.71.
+- Braking data and the CARLA fit: new for 2027.
 - Worked example "same car, two roads" was dropped; its braking animation became the Fiesta stop.
 
 ## Accessibility check (docs/ACCESSIBILITY.md)

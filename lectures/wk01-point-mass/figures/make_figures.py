@@ -37,6 +37,16 @@ ax.legend(frameon=False); clean(ax)
 fig.tight_layout(); fig.savefig(os.path.join(HERE, "stopping-distance.png"), dpi=160)
 print(f"fitted deceleration = {a_fit:.2f} m/s^2, mu = {a_fit / 9.81:.3f}")
 
+# 1b. the measured stops alone, for the handout (students fit mu themselves)
+fig, ax = plt.subplots(figsize=(7, 4.3))
+ax.plot(v0, dist, "o", color=GOLD, ms=9, mec=BROWN, label="CARLA: measured full-brake stops")
+for vi, di in zip(v0, dist):
+    ax.annotate(f"$v_0$ = {vi:.0f} m/s", (vi, di), xytext=(8, -14), textcoords="offset points", fontsize=9, color=GRAY)
+ax.set_xlim(0, 32); ax.set_ylim(0, 80)
+ax.set_xlabel("initial speed (m/s)"); ax.set_ylabel("stopping distance (m)")
+ax.legend(frameon=False, loc="upper left"); clean(ax)
+fig.tight_layout(); fig.savefig(os.path.join(HERE, "carla-stops.png"), dpi=160)
+
 # 2. speed trace during braking
 fig, ax = plt.subplots(figsize=(7, 4.0))
 for d, col in [(data[3], BROWN), (data[5], GOLD)]:
@@ -79,4 +89,4 @@ for ax, title, ysign in [(axs[0], "ISO 8855 (this course)", 1), (axs[1], "CARLA 
 axs[0].text(-1.9, -1.9, "right-handed", fontsize=11, color=GRAY)
 axs[1].text(-1.9, -1.9, "left-handed", fontsize=11, color=GRAY)
 fig.tight_layout(); fig.savefig(os.path.join(HERE, "vehicle-frames.png"), dpi=160)
-print("wrote stopping-distance.png braking-trace.png fbd-point-mass.png vehicle-frames.png")
+print("wrote carla-stops.png stopping-distance.png braking-trace.png fbd-point-mass.png vehicle-frames.png")

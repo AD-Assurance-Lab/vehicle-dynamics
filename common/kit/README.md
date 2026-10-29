@@ -16,7 +16,9 @@ One HTML file gives three views:
 - Math: LaTeX between `\( ... \)` (inline) or `\[ ... \]` (display). Rendered to MathML.
   Avoid `\underbrace` and other stretched glyphs: they print without text meaning
   and fail the accessibility check.
-- `class="notes"`: notes view and handout only. `class="present-only"`: slides only.
+- `class="notes"`: what the instructor says; notes view only, never in the handout. `class="present-only"`: slides only.
+  `class="no-print"`: everywhere but the handout (credits slide, answers to questions asked live).
+  The handout must not answer a question that is asked live in class.
 - Examples: `<section class="slide worked-example">` or `group-example`, starting
   with `<span class="example-label">Worked example 1</span>`.
 - Blank workspace for the handout: `<div class="workspace" style="--h: 2.4in" aria-hidden="true"></div>`.

@@ -4,8 +4,10 @@
 - Grades of any kind, gradebook exports, eLearning exports.
 - Named student work (exams, quizzes, reports, slides) unless the student gave
   written consent, recorded in the week or project README.
-- Quiz and exam questions or solutions, and practice-problem solutions. Those
-  live on Google Drive only (students get them through eLearning).
+- Quiz and exam questions or solutions: Google Drive only.
+- Group- and worked-example solutions (`practice-problems/`): tracked on the private
+  `draft` branch and kept on the course Shared Drive ("2027 Course"), never on `main`.
+  Students get them through eLearning.
 - Third-party figures or code without a recorded license that allows CC BY or
   Apache-2.0 redistribution. Record source and license in the week README.
 - Videos, model weights, zips, ISOs. Link to Drive or a release asset instead.
@@ -35,8 +37,10 @@ The `.gitignore` is an allowlist. Do not widen it to make a file commit.
   (rules in `common/kit/README.md`). The handout PDF is printed from the same file
   with `tools/build_pdf.py`, which must report veraPDF PASS.
 - Figures come from a `make_figures.py` next to them.
-- Group-example solutions live in `practice-problems/` (local only) and go on
-  eLearning after class. Worked-example solutions are handwritten, Drive only.
+- Typed group- and worked-example solutions live in `practice-problems/wkNN/`
+  (draft only) and on Drive; group-example solutions go on eLearning after class.
+- The handout PDF never shows speaker notes (`.notes`) or the credits slide, and never
+  answers a question asked live in class (`.no-print` for those).
 - Every PDF must pass veraPDF (PDF/UA) before it is posted.
 - Content is built one week at a time. A week is done when its README lists
   every figure source, passes the accessibility check in `docs/ACCESSIBILITY.md`,

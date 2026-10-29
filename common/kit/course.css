@@ -119,7 +119,8 @@ body.read figure img { max-width: 40rem; }
   body .title-slide { background-image: none !important; display: block !important; }
   body .title-slide h1 { font-size: 20pt !important; }
   .chrome-bar, .progress, .view-toggle, .present-only, .screen-only { display: none !important; }
-  .notes, .print-only { display: block; }
+  .notes, .no-print { display: none !important; }
+  .print-only { display: block; }
   span.print-only { display: inline; }
   .workspace { display: block; height: var(--h, 2.2in); border: .6pt solid var(--brown); border-radius: 4pt; margin: 6pt 0 10pt; }
   figure, table, .keep, .cols, .group-example, .worked-example { break-inside: avoid; }
