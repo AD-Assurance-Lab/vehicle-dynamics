@@ -53,6 +53,8 @@ The point-mass overlay on the MKZ is a separate SVG layer over the unmodified ph
 
 ## Accessibility check (docs/ACCESSIBILITY.md)
 - [x] Handout PDF passes veraPDF PDF/UA-1
+- [x] Web page passes axe 4.10 (WCAG 2.1 A and AA, plus best practice): 0 violations in notes and slide views, 2026-10-29
+- [x] Text in drawings at least 4.5:1 contrast (lowest 4.6:1); no motion over 5 s that starts by itself
 - [x] Alt text or title/desc on every figure
 - [x] Equations are MathML
 - [ ] Ally score on eLearning (after upload)

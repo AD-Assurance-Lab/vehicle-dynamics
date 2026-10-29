@@ -27,7 +27,10 @@ One HTML file gives three views:
   or table). The PDF build refuses a page that breaks this rule. An animation
   whose resting state is a complete figure (like the Lecture 1A braking race)
   needs no fallback.
-- Every image needs alt text. Respect `prefers-reduced-motion` in any animation.
+- Every image needs alt text. Respect `prefers-reduced-motion` in any animation. Motion that starts by
+  itself must stop within 5 s (WCAG 2.2.2); longer animations start from a button.
+- Every form control needs a text label; a label that is only math needs `aria-label` too.
+- Check the web page with axe (WCAG 2.1 AA) as well as the PDF with veraPDF.
 - Empty table cells do not get tagged. Put a visible mark such as `?` in blank
   answer cells.
 

@@ -70,7 +70,7 @@
   @property --ang { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
   .rainbow { position: relative; isolation: isolate; border-radius: 12px; padding: 5px;
     background: conic-gradient(from var(--ang), #E63946, #F4A261, #F1C500, #2A9D8F, #457B9D, #8E44AD, #E63946);
-    animation: rainbow-turn 4s linear infinite; }
+    animation: rainbow-turn 4.5s ease-out 1; }
   .rainbow::before { content: ""; position: absolute; inset: -4px; border-radius: 16px; background: inherit; filter: blur(12px);
     opacity: .55; z-index: -1; }
   .rainbow > table { background: #fff; border-radius: 8px; margin: 0; width: 100%; }
@@ -108,6 +108,7 @@
   body.present .timeline .step { transform: none; }
   body.present .map .fly { transform: translate(var(--dx), var(--dy)); transition: opacity .3s ease, transform 1s cubic-bezier(.3,.8,.25,1); }
   body.present .map .fly.shown { transform: none; }
+  @media (prefers-reduced-motion: reduce) { body.present .map .fly { transition: none; } }
 
   /* speed gauges */
   .gauges { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5em; }
@@ -652,7 +653,7 @@
       </svg>
       <div class="controls">
         <label for="fit-mu">\(\mu\)</label>
-        <input id="fit-mu" type="range" min="0.40" max="1.00" step="0.01" value="0.50" style="width: 9em">
+        <input id="fit-mu" type="range" aria-label="Tire friction coefficient mu" min="0.40" max="1.00" step="0.01" value="0.50" style="width: 9em">
         <output id="fit-mu-out" for="fit-mu"></output>
       </div>
       <p class="readout" id="fit-ab"></p>

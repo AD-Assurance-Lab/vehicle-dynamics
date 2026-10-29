@@ -113,7 +113,7 @@
     toggle.type = "button";
     toggle.addEventListener("click", () => setView(document.body.classList.contains("present") ? "read" : "present"));
     document.body.prepend(toggle);
-    const bar = document.createElement("div");
+    const bar = document.createElement("footer");   // a landmark, so screen readers can find it
     bar.className = "chrome-bar";
     bar.innerHTML = '<span>' + (document.body.dataset.course || "") + '</span><span class="slide-counter"></span>';
     document.body.appendChild(bar);
