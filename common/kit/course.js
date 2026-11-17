@@ -179,6 +179,21 @@
     live.style.cssText = "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)";
     document.body.appendChild(live);
 
+    // an end slide (screen only): back to the course page, the notes view, the handout.
+    // The course page is ../../index.html (lectures and labs sit two folders down); data-home sets another, "none" skips it.
+    const home = document.body.dataset.home || "../../index.html";
+    if (home !== "none") {
+      const name = document.title.split(":")[0].trim() || "this lecture";
+      const pdf = (location.pathname.split("/").pop() || "").replace(/\.html?$/, ".pdf");
+      const end = document.createElement("section");
+      end.className = "slide end-slide no-print";
+      end.innerHTML = '<h2>End of ' + name + '</h2><p class="end-links">' +
+        '<a class="btn" href="' + home + '">Back to the course page</a>' +
+        '<a class="btn alt" href="?view=read">Notes view</a>' +
+        (pdf ? '<a class="btn alt" href="' + pdf + '">Handout (PDF)</a>' : "") + '</p>';
+      document.querySelector("main").appendChild(end);
+    }
+
     const hash = parseInt(location.hash.slice(1), 10);
     if (hash > 0) idx = hash - 1;
     let view = new URLSearchParams(location.search).get("view") || document.body.dataset.view;

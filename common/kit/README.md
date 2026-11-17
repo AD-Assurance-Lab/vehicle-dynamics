@@ -5,8 +5,11 @@ One HTML file gives three views:
 
 | View | How to get it | Used for |
 |---|---|---|
-| Slides | open the file (wide screens default to it) | presenting |
+| Slides | open the file (wide screens default to it), or add `?view=present` | presenting |
 | Notes | press R, or the button at top right, or add `?view=read` | studying, screen readers |
+
+The kit adds a last slide (screen only) with links back to the course page (`../../index.html`, or the
+body's `data-home`; `data-home="none"` leaves it out), to the notes view and to the handout PDF.
 | Handout PDF | `tools/build_pdf.py <file>.html` | printing, writing, Wacom examples |
 
 ## Writing a lecture
