@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 1: Linux, Python, Braking Test in CARLA</title>
+<meta name="author" content="Zachary D. Asher">
+<meta name="description" content="ME 4650/5950 Vehicle Dynamics and Control, Week 1 lab: the course USB drive, a first Python program, stopping distance, and a braking test in CARLA.">
+<link rel="stylesheet" href="../../common/kit/course.css">
+<script src="../../common/kit/vendor/temml.min.js" defer></script>
+<script src="../../common/kit/course.js" defer></script>
+<style>
+  /* A short lab sheet: a one-line header, then each part as a goal, a picture of the result and numbers to check. */
+  :root { --mono: "DejaVu Sans Mono", "Liberation Mono", monospace; }
+  code, kbd { font-family: var(--mono); font-size: .9em; }
+  kbd { border: 1px solid #8A817B; border-radius: 4px; padding: 0 .25em; background: #fff; }
+  .labhead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .2em 1.2em; align-items: baseline;
+    border-bottom: 4px solid var(--gold); padding-bottom: .3em; margin-bottom: .5em; }
+  .labhead h1 { font-size: 1.35em; margin: 0; line-height: 1.2; }
+  .labhead p { margin: 0; color: var(--muted); font-size: .85em; }
+  .rules { font-size: .9em; margin: .2em 0 0; }
+  h2 { font-size: 1.15em; margin: .2em 0 .35em; }
+  main > section.slide + section.slide { margin-top: 1.6em; }
+  .part { display: grid; grid-template-columns: 1fr 1fr; gap: .4em 1.2em; align-items: start; }
+  .part figure { margin: 0; }
+  .part img { width: 100%; height: auto; display: block; border: 1px solid #D9D2CC; border-radius: 4px; }
+  .part figcaption { font-size: .8em; color: var(--muted); margin-top: .2em; }
+  ol, ul { margin: .2em 0 .4em; padding-left: 1.3em; }
+  li { margin-bottom: .25em; }
+  .goal { font-weight: 700; color: var(--brown); margin: 0 0 .3em; }
+  .part + .part { margin-top: 1.4em; }
+  .report { columns: 2; column-gap: 2em; font-size: .92em; } .report li { break-inside: avoid; margin-bottom: .2em; }
+  .trouble { border: 1.5px dashed #8A817B; border-radius: 6px; padding: .25em .6em; margin: .4em 0; font-size: .88em; }
+  .check { background: var(--gold-light); border-left: 6px solid var(--gold); padding: .25em .6em; margin: .4em 0; font-size: .92em; }
+  pre.cmd { background: #300A24; color: #fff; font-family: var(--mono); font-size: .85em; padding: .4em .7em; border-radius: 6px; margin: .3em 0;
+    white-space: pre-wrap; overflow-wrap: anywhere; }
+  pre.code { font-family: var(--mono); font-size: .72em; background: #F7F7F7; border: 1px solid #C9C2BD; border-radius: 6px; padding: .45em .8em; margin: .5em 0 0; white-space: pre; overflow-x: auto; line-height: 1.35; }
+  .tag-t, .tag-c { display: inline-block; font-weight: 700; font-size: .8em; color: #fff; padding: 0 .4em; border-radius: 4px; }
+  .tag-t { background: #300A24; } .tag-c { background: #005FB8; }
+  body.read .part { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 760px) { body.read .part { grid-template-columns: 1fr; } }
+  @media print {
+    @page {
+      size: letter;
+      margin: .78in .45in .55in;
+      @top-left { content: "Lab 1: Linux, Python, Braking Test in CARLA"; font: 700 10pt "Source Sans 3", "Liberation Sans", sans-serif; color: #532E1F; vertical-align: bottom; padding-bottom: 5pt; border-bottom: 1.5pt solid #F1C500; margin-bottom: 14pt; }
+      @top-center { content: "ME 4650/5950 Vehicle Dynamics & Control"; font: 9pt "Source Sans 3", "Liberation Sans", sans-serif; color: #5E5650; vertical-align: bottom; padding-bottom: 5pt; border-bottom: 1.5pt solid #F1C500; margin-bottom: 14pt; }
+      @top-right { content: "© 2027 Zachary D. Asher, PhD · CC BY 4.0"; font: 9pt "Source Sans 3", "Liberation Sans", sans-serif; color: #5E5650; vertical-align: bottom; padding-bottom: 5pt; border-bottom: 1.5pt solid #F1C500; margin-bottom: 14pt; }
+    }
+    /* the page header shows the title; this copy stays in the PDF tags (the document's H1) but takes no space */
+    .labhead { display: block; border: 0; padding: 0; margin: 0; height: 1pt; overflow: hidden; }
+    .labhead h1, .labhead p { font-size: 1pt !important; line-height: 1pt; color: #fff !important; margin: 0; }
+    body.read main, body main { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+    main > section.slide + section.slide { margin-top: 10pt !important; }
+    html, body main, body .slide { font-size: 9.5pt !important; }
+    .part figure img { max-height: 2.15in; width: auto !important; max-width: 100% !important; }
+    body .slide { padding-bottom: 6pt !important; }
+    .labhead h1 { font-size: 13pt; }
+    h2 { font-size: 11.5pt !important; }
+    .part { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 4pt 12pt; }
+    figure img { max-width: 100% !important; }
+    pre.cmd { background: #fff; color: #1F1A17; border: .6pt solid #8A817B; }
+    pre.code { background: #fff; font-size: 7.4pt; line-height: 1.15; padding: 3pt 6pt; }
+    .part + .part { margin-top: 12pt; }
+    .tag-t, .tag-c { color: #1F1A17; background: #fff; border: .6pt solid #1F1A17; }
+  }
+</style>
+</head>
+<body data-course="ME 4650/5950 Vehicle Dynamics &amp; Control · Lab 1" data-view="read">
+<main>
+
+<section class="slide">
+  <div class="labhead">
+    <h1>Lab 1: Linux, Python, Braking Test in CARLA</h1>
+    <p>ME 4650/5950 Vehicle Dynamics &amp; Control · © 2027 Zachary D. Asher, PhD · CC BY 4.0, code Apache-2.0</p>
+  </div>
+  <h2>Launch Ubuntu (5 min)</h2>
+  <ol>
+    <li>Plug the course USB drive into the computer. In Windows, click the power icon, hold <kbd>Shift</kbd> and click Restart.</li>
+    <li>On the blue screen choose <b>Use a device</b>, then the USB drive. Ubuntu starts by itself.</li>
+    <li>When you are done: press the power button once, click Power Off, wait until the computer is off, then remove the drive.</li>
+  </ol>
+  <p class="check">Before you start, read the Lab Report section at the end: it lists what to save as you go.</p>
+</section>
+
+<section class="slide">
+  <h2>Task 1. The terminal and VS Code (20 min)</h2>
+  <div class="part">
+    <div>
+      <p class="goal">Goal: a folder <code>lab1</code> in your home folder, holding <code>hello.py</code>, run from VS Code.</p>
+      <ol>
+        <li><span class="tag-t">Terminal</span> (dock): make the folder, go into it, open it in VS Code:
+          <code>mkdir lab1</code>, <code>cd lab1</code>, <code>code .</code></li>
+        <li><span class="tag-c">VS Code</span>: New File <code>hello.py</code>, one line that prints <code>Hello, world!</code>,
+          save with <kbd>Ctrl</kbd>+<kbd>S</kbd>.</li>
+        <li>Open its terminal panel, <kbd>Ctrl</kbd>+<kbd>`</kbd>, and run <code>python3 hello.py</code>.</li>
+      </ol>
+      <p class="check">Check: your screen matches the picture. Take a screenshot with <kbd>PrtSc</kbd> (it lands in
+      Pictures/Screenshots); it goes in your PDF.</p>
+    </div>
+    <figure><img src="figures/target-hello.png" alt="VS Code on the course drive: the folder LAB1 holds hello.py, whose one line is print of Hello, world. The terminal panel below ran python3 hello.py and printed Hello, world!">
+      <figcaption>Task 1 done: hello.py in lab1, run in VS Code's terminal panel.</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Task 2. Braking distance in Python (40 min)</h2>
+  <div class="part">
+    <div>
+      <p class="goal">Goal: make this plot.</p>
+      <p>A car braking at a constant deceleration \(a_b\) from speed \(v_0\) stops in \(d = v_0^2 / (2 a_b)\). Dry asphalt,
+      wet asphalt, packed snow and ice give \(a_b\) = 8.0, 5.9, 2.5 and 1.0 m/s². Download the layout an engineer would
+      want, have your AI assistant fill it in, then check its code against each comment:</p>
+<pre class="cmd">wget https://ad-assurance-lab.github.io/vehicle-dynamics/labs/wk01-braking/stopping.py</pre>
+<pre class="code">import numpy as np
+import matplotlib.pyplot as plt
+
+# 1. Constants at the top, units in the comment
+MPH = ...                              # m/s per mph
+
+# 2. The physics only: SI units in, meters out, nothing added
+def stopping_distance(v0, a_b):        # v0 in m/s, a_b in m/s^2
+    ...                                # d = v0^2 / (2 a_b)
+
+# 3. The four surfaces and their a_b (m/s^2) in one dictionary
+surfaces = ...
+
+# 4. Speeds 10 to 80 mph for the plot, converted to m/s once, here
+mph = ...
+v0 = ...
+
+# 5. One curve per surface; each axis says what it shows and its unit
+...
+
+# 6. Check: dry asphalt from 30 and 60 mph (11.2 m and 45.0 m)
+...</pre>
+    </div>
+    <figure><img src="figures/target-stopping.png" alt="Target plot: braking distance in meters against speed in mph from 10 to 80, four rising curves, from dry asphalt, lowest, to ice, highest, reaching about 640 m at 80 mph. Labeled axes, a legend, a grid and the title Braking distance.">
+      <figcaption>The plot to reproduce.</figcaption>
+      <p class="check">Check: dry asphalt stops in 11.2 m from 30 mph and in 45.0 m from 60 mph. About 56 m at 30 mph
+      means the speed was never converted to m/s.</p></figure>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Task 3. How much grip do CARLA's tires have? (60 min)</h2>
+  <div class="part">
+    <div>
+      <ol>
+        <li><span class="tag-t">Terminal</span>: <code>carla</code>. Wait until its window shows a city (10 to 30 s), then put
+          it on the left half: <kbd>Super</kbd>+<kbd>←</kbd> (Super is the Windows key). Leave this terminal alone.</li>
+        <li><span class="tag-c">VS Code</span> on the right half (<kbd>Super</kbd>+<kbd>→</kbd>). In its terminal panel, in
+          <code>lab1</code>, download the test and run it from five speeds, in m/s:
+<pre class="cmd">wget https://ad-assurance-lab.github.io/vehicle-dynamics/labs/wk01-braking/brake_test.py
+python3 brake_test.py 10</pre>
+          then 15, 20, 25 and 30. The first run replaces the city with a flat test road. Each run speeds a car up, brakes
+          fully, prints the start speed, stopping distance and time, and writes <code>brake_10.csv</code> and so on (time,
+          speed, distance during the stop).</li>
+      </ol>
+      <p class="trouble"><b>If something goes wrong:</b> "time-out ... waiting for the simulator" means CARLA is not up yet;
+      wait for its window and run the test again. "CARLA is already running": use that window. No network: save the files
+      from this page in Firefox.</p>
+    </div>
+    <figure><img src="figures/target-carla.jpg" alt="The course drive: CARLA on the left half of the screen, its camera following a gray car on a wide, flat, empty test road; VS Code on the right half with brake_test.py open and the test running in its terminal panel.">
+      <figcaption>What you should see while a test runs.</figcaption></figure>
+  </div>
+  <div class="part">
+    <div>
+      <p class="goal">Goal: the tire friction coefficient \(\mu\).</p>
+      <p>Hard braking uses all the tire friction, so \(a_b = \mu g\) and \(d = v_0^2 / (2 \mu g)\), with \(g\) = 9.81 m/s².
+      Plot your five stops as dots, \(d\) against \(v_0\). Add the curve for a value of \(\mu\) (<code>v0 = np.linspace(0, 32,
+      65)</code>, <code>d = v0**2 / (2 * mu * 9.81)</code>) and change \(\mu\) until the curve runs through the stops from
+      15 m/s up. Report \(\mu\) and \(a_b\).</p>
+      <p>Then plot speed against time from <code>brake_30.csv</code> and answer: Where does the trace leave a straight line,
+      and why? (Look closely at the first 0.2 s and at each kink.) Is one \(\mu\) enough to predict every stop?</p>
+      <p class="check">Check: \(\mu\) comes out between 0.6 and 0.8. The 10 m/s stop sits above the curve: say why.</p>
+    </div>
+    <figure><img src="figures/fit-sketch.png" alt="Sketch of the plot to make: stopping distance against initial speed, five dots and a curve through the four fastest, the slowest dot a little above the curve. No numbers.">
+      <figcaption>The shape of the plot (yours has numbers).</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Lab Report: one PDF per pair, on eLearning (10 min)</h2>
+  <p>Make it in Google Docs or Word in Microsoft 365 (Firefox is on the drive), download it as a PDF and upload it. Copy
+  this outline into your document, keep each label as it is, and fill in every line. Paste code as text, not a picture.</p>
+  <ol class="report">
+    <li><b>Names:</b> both partners</li>
+    <li><b>Task 1 screenshot:</b> your screen</li>
+    <li><b>Task 2 code:</b> your <code>stopping.py</code></li>
+    <li><b>Task 2 plot:</b> your plot</li>
+    <li><b>Task 2 numbers:</b> 30 mph: __ m; 60 mph: __ m</li>
+    <li><b>Task 3 runs:</b> a table, one row per run: start speed (m/s), stopping distance (m), stopping time (s)</li>
+    <li><b>Task 3 fit plot:</b> \(d\) against \(v_0\), dots and curve</li>
+    <li><b>Task 3 results:</b> \(\mu\) = __; \(a_b\) = __ m/s²</li>
+    <li><b>Task 3 speed plot:</b> speed against time, 30 m/s</li>
+    <li><b>Task 3 trace:</b> two sentences</li>
+    <li><b>Task 3 one μ:</b> two sentences</li>
+    <li><b>AI log:</b> three lines at most; your AI assistant can write it from your chat</li>
+  </ol>
+</section>
+
+</main>
+</body>
+</html>
