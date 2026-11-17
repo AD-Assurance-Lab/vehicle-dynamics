@@ -1,0 +1,1983 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lecture 1B: How Do You Talk to a Simulated Car? Toolchain: Python, Linux and CARLA</title>
+<meta name="author" content="Zachary D. Asher">
+<meta name="description" content="ME 4650/5950 Vehicle Dynamics and Control, Week 1, Lecture B. Slides, notes and the printable handout from one file.">
+<link rel="stylesheet" href="../../common/kit/course.css">
+<script src="../../common/kit/vendor/temml.min.js" defer></script>
+<script src="../../common/kit/course.js" defer></script>
+<style>
+  /* Lecture 1B. The room has no student laptops: students read, predict and write on paper, and the
+     slides carry the computer. Every code box is one of two windows students will meet on the course
+     USB drive: the Ubuntu terminal (aubergine) or VS Code (Dark Modern).
+     Readability rules for this deck: body text 26 px or more, code 18 px or more, at most three short
+     points per column, one takeaway line per slide. Each of today's four parts has its own color, the same as its box
+     on the map. */
+  :root { --mono: "DejaVu Sans Mono", "Liberation Mono", monospace;
+    --linux: #532E1F; --term: #300A24; --py: #2B5B84; --api: #8A5A00; --carla: #1E6B52; --ros: #22314E;
+    --c1: var(--linux); --c2: var(--py); --c3: var(--carla); --c4: var(--api); }
+  svg text { font-family: var(--font); }
+  img { border-radius: 6px; }
+  body.present .slide { line-height: 1.3; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2em; align-items: start; }
+  body.read .two { grid-template-columns: 1fr; }
+  .controls { display: flex; gap: .7em; align-items: center; flex-wrap: wrap; font-size: .8em; margin-top: .4em; }
+  .btn.secondary { background: #fff; color: var(--brown); border: 2px solid var(--brown); }
+  .ans { color: var(--brown); font-weight: 700; }
+  .blank { display: none; }
+  .small { font-size: .86em; }
+  code { font-family: var(--mono); font-size: .9em; }
+
+  /* the takeaway line, short points, and the key box */
+  .lead { font-size: .95em; font-weight: 700; color: var(--brown); margin: -.1em 0 .55em; }
+  .pts { list-style: none; padding: 0; margin: 0; font-size: .9em; }
+  .pts li { margin: 0 0 .7em; padding-left: 1.05em; position: relative; }
+  .pts li::before { content: ""; position: absolute; left: 0; top: .42em; width: .45em; height: .45em; background: var(--gold); border-radius: 2px; }
+  .pts li small { display: block; color: var(--muted); font-size: .82em; margin-top: .1em; }
+  .key { background: var(--gold-light); border-left: 8px solid var(--gold); border-radius: 0 6px 6px 0; padding: .35em .8em; font-size: .88em; margin: .7em 0 0; }
+  .qs { font-size: .86em; margin: .3em 0; padding-left: 1.3em; }
+  .qs li { margin: 0 0 .45em; }
+
+  /* the minimap: which of today's six parts this slide is in (slide view only) */
+  .minimap { display: none; }
+  body.present .minimap { display: flex; position: absolute; top: 10px; left: 70px; gap: 5px; margin: 0; padding: 0; list-style: none; font-size: 14px; }
+  .minimap li { border: 1.5px solid #C9C2BD; color: var(--muted); border-radius: 11px; padding: 1px 9px; background: #fff; }
+  .minimap li.on { color: #fff; font-weight: 700; }
+  body.present .slide.group-example .minimap, body.present .slide.worked-example .minimap { left: 52px; }
+
+  /* title */
+  body.present .title-panel { background: rgba(255,255,255,.93); border-left: 12px solid var(--gold); padding: .6em 1em .7em; align-self: flex-start; max-width: 96%; }
+  body.present .title-slide h1 { font-size: 1.8em; line-height: 1.15; margin-bottom: .2em; }
+  .title-slide .subtitle { font-size: 1.05em; font-weight: 600; color: var(--brown); margin: 0 0 1.4em; white-space: nowrap; }
+  .title-slide .meta { font-size: .72em; color: var(--muted); margin: 0; line-height: 1.45; }
+  .title-slide .logo { margin: .8em 0 .1em; }
+  .title-slide .logo img { height: 1.1em; width: auto; border-radius: 0; display: block; }
+
+  /* ---------- the two windows ---------- */
+  .win { border-radius: 8px; overflow: hidden; box-shadow: 0 3px 10px rgba(0,0,0,.28); margin: .2em 0; font-size: .66em; }
+  .win .bar { display: flex; align-items: center; font-family: var(--font); font-size: .9em; min-height: 1.9em; }
+  .win pre { margin: 0; padding: .5em .8em; font-family: var(--mono); line-height: 1.42; white-space: pre; overflow: hidden; }
+  /* Ubuntu terminal */
+  .win.term .bar { background: #242424; color: #fff; justify-content: center; position: relative; font-weight: 700; }
+  .win.term .bar .btns { position: absolute; right: .7em; color: #C0C0C0; letter-spacing: .5em; font-weight: 400; }
+  .win.term pre { background: #300A24; color: #fff; }
+  .win.term .p { color: #8AE234; font-weight: 700; }
+  .win.term .d { color: #729FCF; font-weight: 700; }
+  /* VS Code, Dark Modern */
+  .win.code .bar { background: #181818; color: #CCCCCC; }
+  .win.code .tab { background: #1F1F1F; color: #fff; padding: .35em 1em; border-top: 2px solid #0078D4; }
+  .win.code .tab::before { content: ""; display: inline-block; width: .55em; height: .55em; border-radius: 50%; background: #4B8BBE; margin-right: .45em; vertical-align: .05em; }
+  .win.code .label { margin-left: auto; padding-right: .8em; color: #CCCCCC; font-size: .9em; }
+  .win.code pre { background: #1F1F1F; color: #CCCCCC; }
+  .win.code .ln { color: #8B949E; display: inline-block; width: 1.5em; text-align: right; margin-right: 1.1em; }
+  .win.code .panel { background: #181818; color: #CCCCCC; border-top: 1px solid #3C3C3C; }
+  .win.code .panel .ptab { font-family: var(--font); font-size: .85em; padding: .25em .9em 0; letter-spacing: .04em; }
+  .win.code .panel .ptab span { border-bottom: 1px solid #fff; color: #fff; }
+  .win.code .panel pre { background: #181818; }
+  .win.code .panel .p { color: #23D18B; font-weight: 700; }
+  .win.code .panel .d { color: #3B8EEA; font-weight: 700; }
+  /* Python colors, as Dark Modern draws them */
+  .tk-cm { color: #6A9955; } .tk-st { color: #CE9178; } .tk-nu { color: #B5CEA8; } .tk-kw { color: #C586C0; }
+  .tk-df { color: #569CD6; } .tk-fn { color: #DCDCAA; } .tk-md { color: #4EC9B0; } .tk-va { color: #9CDCFE; }
+  .win pre .hl { background: #6B4A12; display: inline-block; width: 100%; }
+  .win pre .hl, .win pre .hl * { color: #fff; }
+  .tag-t, .tag-c { display: inline-block; font-weight: 700; font-size: .78em; color: #fff; padding: .02em .45em; border-radius: 4px; vertical-align: .08em; }
+  .tag-t { background: #300A24; } .tag-c { background: #005FB8; }
+
+
+  /* the map: today's toolchain as nested boxes, everything inside Linux. Slide 2 builds it click by click: when the
+     API comes in, Python widens to hold it and CARLA slides right. Later slides show copies made by the script below
+     (.static): .ros adds ROS 2 and crosses out the API; .f-linux, .f-python, .f-carla, .f-all gray out all but one
+     part and outline it in a turning rainbow. Notes view and print show the end state. */
+  .map { width: 100%; height: auto; display: block; margin-top: .2em; overflow: visible; }
+  .map .sub { fill: #5E5650; font-size: 20px; }
+  .map .tk { fill: #1F1A17; font-size: 19px; }
+  .map .mono { font-family: var(--mono); }
+  .map .k-problem, .map .direct, .map .ros-only { display: none; }
+  .map .py-box { width: 445px; }
+  .map .mv-carla { transform: translateX(235px); }
+  body.present .map.build .k-problem, body.present .map.build .direct { display: inline; }
+  body.present .map.build .py-box { width: 150px; transition: width .9s ease; }
+  body.present .map.build .mv-carla { transform: none; transition: transform .9s ease; }
+  body.present .map.build .direct, body.present .map.build .k-problem { transition: opacity .4s ease; }
+  body.present .map.build .k-api.shown { transition-delay: .8s; }
+  body.present .map.build:has(.k-api.shown) .py-box { width: 445px; }
+  body.present .map.build:has(.k-api.shown) .mv-carla { transform: translateX(235px); }
+  body.present .map.build:has(.k-api.shown) .direct, body.present .map.build:has(.k-api.shown) .k-problem { opacity: 0; }
+  .map.static .band-api { display: none; }
+  .map.ros .ros-only { display: inline; }
+  .map.ros .api { opacity: .35; transition: opacity .5s ease; }
+  body.present .map.ros .api { opacity: 1; }
+  body.present .map.ros:has(.k-ros.shown) .api { opacity: .35; }
+  .map .dim { filter: grayscale(1); opacity: .28; }
+  .map .rb-glow { filter: blur(5px); opacity: .6; }
+  body.present .slide.current .map .rb rect { animation: rb-turn 4.5s ease-out 1; }
+  @keyframes rb-turn { to { stroke-dashoffset: calc(-1px * var(--p)); } }
+  @media (prefers-reduced-motion: reduce) { .map * { transition: none !important; animation: none !important; } }
+
+  /* what is an API: a waiter */
+  .api-row { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 2.4em; margin-top: .3em; }
+  .api-st { margin: 0; }
+  .api-st img { width: 100%; height: 232px; object-fit: cover; display: block; }
+  .api-st figcaption { font-size: .82em; font-weight: 700; color: var(--ink); text-align: center; margin-top: .2em; }
+  .api-lane { position: absolute; inset: 0; pointer-events: none; }
+  .api-lane .chip { position: absolute; font-size: .62em; padding: .15em .55em; box-shadow: 0 2px 8px rgba(0,0,0,.35); border: 2px solid var(--brown); }
+  .api-lane .chip.back { background: #D7EEDC; border-color: var(--carla); }
+  .api-map { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 2.4em; margin: .35em 0 0; text-align: center; font-size: .82em; font-weight: 700; }
+  .api-map span { color: #fff; border-radius: 6px; padding: .1em .4em; position: relative; }
+  .api-map span + span::before { content: "⇄"; position: absolute; left: -1.2em; transform: translateX(-50%); color: var(--brown); }
+  .m-py { background: var(--py); } .m-api { background: var(--api); } .m-carla { background: var(--carla); }
+  .key .term { font-weight: 700; color: #6B4500; }
+  body.read .api-row, body.read .api-map { grid-template-columns: 1fr; }
+
+  /* the terminal starts your programs */
+  .launch { display: grid; gap: .6em; }
+  .ln-row { display: grid; grid-template-columns: 1fr 110px 1.15fr; gap: .5em; align-items: center; }
+  .ln-row .win { font-size: .72em; margin: 0; }
+  .ln-row .win pre { padding: .6em .8em 3.2em; }
+  .ln-row .ln-arrow { width: 110px; height: 40px; }
+  .ln-row figure { margin: 0; }
+  .ln-row img { width: 100%; height: 205px; object-fit: cover; object-position: top left; display: block; box-shadow: 0 3px 10px rgba(0,0,0,.28); }
+  .ln-row figcaption { font-size: .74em; margin-top: .2em; }
+  .tag-carla { display: inline-block; font-weight: 700; font-size: .78em; color: #fff; padding: .02em .45em; border-radius: 4px; vertical-align: .08em; background: var(--carla); }
+  body.read .ln-row { grid-template-columns: 1fr; }
+  body.read .ln-row .ln-arrow { transform: rotate(90deg); }
+
+  /* the CARLA API menu */
+  .menu-card { background: #FFFBEF; border: 7px double var(--api); border-radius: 16px; padding: .15em 1.3em .45em; margin-top: .1em;
+    box-shadow: 0 3px 12px rgba(107,69,0,.18); }
+  .menu-title { font-family: "DejaVu Serif", "Liberation Serif", Georgia, serif; font-style: italic; font-weight: 700; font-size: 1.2em;
+    color: #6B4500; text-align: center; margin: .05em 0 0; }
+  .menu-sub { text-align: center; font-size: .7em; color: var(--muted); margin: 0 0 .1em; }
+  .menu-card h3 { font-family: "DejaVu Serif", "Liberation Serif", Georgia, serif; font-variant: small-caps; letter-spacing: .08em;
+    color: var(--api); font-size: .8em; margin: .3em 0 .05em; padding: 0; border-bottom: 1px solid #E3C98A; }
+  .menu-list { list-style: none; margin: 0; padding: 0; }
+  .menu-list li { display: flex; align-items: baseline; gap: .45em; font-size: .78em; margin: .1em 0; }
+  .menu-list li span { white-space: nowrap; }
+  .menu-list li i { flex: 1; border-bottom: 3px dotted #C9A86B; transform: translateY(-.3em); min-width: 1em; }
+  .menu-list li code { font-size: .88em; color: var(--brown); white-space: nowrap; }
+
+  /* putting it all together */
+  .together { display: grid; grid-template-columns: 1.3fr 1fr; gap: 1.2em; align-items: start; margin-top: .3em; }
+  .tg-shot { margin: 0; }
+  .tg-shot img { width: 100%; display: block; box-shadow: 0 3px 10px rgba(0,0,0,.28); }
+  .recipe { margin: 0; padding-left: 1.3em; font-size: .86em; }
+  .recipe li { margin: 0 0 .7em; }
+  .recipe li small { display: block; color: var(--muted); font-size: .8em; }
+  body.read .together { grid-template-columns: 1fr; }
+
+  /* Linux: annotated desktop */
+  .shot { position: relative; margin: 0; }
+  .shot img { width: 100%; display: block; box-shadow: 0 3px 10px rgba(0,0,0,.28); }
+  .shot .tag { position: absolute; transform: translateY(-50%); background: var(--gold); color: var(--brown); font-weight: 700; font-size: .62em; padding: .05em .45em; border-radius: 4px; white-space: nowrap; }
+  .shot .tag::before { content: "◀ "; }
+  .shot .brace { display: block; width: 100%; height: auto; margin-top: 4px; }
+  .shot figcaption { text-align: center; font-weight: 700; color: var(--brown); font-size: .9em; margin-top: -.1em; }
+
+  /* terminal or VS Code: two real windows */
+  .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4em; align-items: start; }
+  /* two separate columns: a line down the middle (slide view) */
+  body.present .split { column-gap: 2.6em; }
+  body.present .split > :last-child { position: relative; align-self: stretch; }
+  body.present .split > :last-child::before { content: ""; position: absolute; left: calc(-1.3em - 1.5px); top: 0; bottom: 0; border-left: 3px solid #D9D2CC; }
+  .vs h3 { font-size: .95em; margin: 0 0 .3em; }
+  .vs img { width: 100%; display: block; box-shadow: 0 3px 10px rgba(0,0,0,.28); }
+  .vs .pts { margin-top: .6em; }
+  body.read .vs { grid-template-columns: 1fr; }
+
+  /* the terminal: prompt anatomy */
+  .anat { font-family: var(--mono); font-size: .8em; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0; background: #300A24; color: #fff; border-radius: 8px; padding: .35em .6em .25em; margin: 0 0 .5em; }
+  .anat span { display: flex; flex-direction: column; align-items: center; }
+  .anat i { font-style: normal; font-family: var(--font); font-size: .66em; color: #FCEFB4; line-height: 1.1; margin-bottom: .15em; }
+  .anat .p { color: #8AE234; font-weight: 700; } .anat .d { color: #729FCF; font-weight: 700; }
+
+  /* write, save, run: real screens, one per click */
+  .flip { display: grid; }
+  .flip .frame { grid-area: 1 / 1; display: grid; grid-template-columns: 800px 1fr; gap: 1em; align-items: start; margin: 0; background: #fff; }
+  body.present .flip .frame.step { transform: none; }
+  .flip .frame img { width: 800px; display: block; box-shadow: 0 3px 10px rgba(0,0,0,.28); border-radius: 4px; }
+  .flip figcaption { font-size: .92em; color: var(--ink); margin: 0; line-height: 1.3; }
+  .flip figcaption b { display: inline-block; font-size: 1.05em; background: var(--gold); color: var(--brown); border-radius: 50%; width: 1.6em; height: 1.6em; line-height: 1.6em; text-align: center; margin-right: .3em; }
+  .flip figcaption .tag-t, .flip figcaption .tag-c { margin: .4em 0 .5em; }
+  body.read .flip { display: block; }
+  body.read .flip .frame { grid-template-columns: 1fr; margin-bottom: 1em; }
+  body.read .flip .frame img { width: 100%; }
+  .flip-print { display: none; }
+
+  /* where does it go: cards */
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.1em 1.2em; margin: .9em 0 .3em; }
+  .cardx { border: 2.5px solid var(--brown); border-radius: 8px; padding: .6em .7em; font-family: var(--mono); font-size: .8em; background: #fff; min-height: 4.4em; display: flex; flex-direction: column; justify-content: space-between; }
+  .cardx .ans { font-family: var(--font); font-size: .85em; margin-top: .4em; color: var(--ink); background: #fff; border: 2px solid; border-radius: 6px;
+    padding: .05em .4em; align-self: flex-start; display: inline-flex; align-items: center; gap: .3em; }
+  .cardx .ans img { height: 1.35em; width: auto; border-radius: 0; }
+  .cardx .ans.t { border-color: #300A24; } .cardx .ans.c { border-color: #005FB8; }
+  .lead .ico { height: 1.3em; width: auto; vertical-align: -.3em; border-radius: 0; }
+  .cardx .blank { font-family: var(--font); }
+
+  /* the simulated terminal */
+  .simterm pre.log { height: 290px; overflow-y: auto; white-space: pre-wrap; }
+  .simterm form { background: #300A24; padding: 0 .8em .5em; font-family: var(--mono); display: flex; gap: .5em; align-items: center; }
+  .simterm label { color: #8AE234; font-weight: 700; white-space: nowrap; }
+  .simterm label .d { color: #729FCF; }
+  .simterm input { flex: 1; background: #3D1530; color: #fff; border: 1px solid #8A6A80; font: inherit; padding: .15em .4em; }
+  .tree { font-size: .78em; }
+  .tree ul { list-style: none; padding-left: 1.1em; margin: .05em 0; }
+  .tree > ul { padding-left: 0; }
+  .tree li { margin: .08em 0; }
+  .tree .kids { columns: 2; }
+  .tree .here { background: var(--gold-light); border: 2px solid var(--gold); border-radius: 5px; padding: 0 .3em; font-weight: 700; }
+  .tree .pin { color: var(--brown); font-weight: 700; font-size: .85em; }
+  .tree .file { color: var(--muted); }
+  .cmds td, .cmds th { padding: .3em .7em; font-size: .86em; }
+  .cmds td:first-child { font-family: var(--mono); color: var(--brown); font-weight: 700; }
+  .cmds.steps td:first-child { font-family: var(--font); color: var(--ink); font-weight: 400; padding-right: 3.2em; }
+  .cmds.steps th:first-child { padding-right: 3.2em; }
+  .cmds.steps td:nth-child(2) { font-family: var(--mono); white-space: nowrap; }
+  /* a command seen for the first time: its words in italics, then the letters it keeps (one click later) */
+  .abbr { font-style: italic; }
+  .abbr s { text-decoration: none; display: inline-block; white-space: pre; overflow: hidden; vertical-align: bottom; max-width: 8em;
+    font-weight: 400; color: var(--muted); transition: max-width .9s ease, opacity .6s ease; }
+  td:has(.shrink.shown) .abbr { font-style: normal; }
+  td:has(.shrink.shown) .abbr s { max-width: 0; opacity: 0; }
+  .cmds.steps td:first-child { white-space: nowrap; }
+  .cmds tr.note6 td { font-size: .8em; font-style: italic; color: var(--brown); padding-top: 0; font-family: var(--font); white-space: normal; }
+  /* MATLAB to Python: words that are not code, and code on several lines */
+  .mp .desc { font-family: var(--font); font-style: italic; color: var(--muted); }
+  .mp .ml { white-space: pre; }
+
+  /* MATLAB to Python */
+  .mp td, .mp th { padding: .2em 2em .2em .8em; font-size: .82em; line-height: 1.25; }
+  .mp td:nth-child(2), .mp td:nth-child(3) { font-family: var(--mono); font-size: .8em; }
+
+  /* group example 3: hints, one per click */
+  .hints { list-style: none; padding: 0; margin: .5em 0 0; font-size: .78em; }
+  .hints li { background: var(--gold-light); border-left: 6px solid var(--gold); border-radius: 0 6px 6px 0; padding: .2em .6em; margin-bottom: .45em; }
+  .hints li::before { content: "Hint: "; font-weight: 700; color: var(--brown); }
+
+  /* variables: code left, boxes and questions right, the run below the code */
+  .vars { display: grid; grid-template-columns: 1.15fr 1fr; grid-template-areas: "code boxes" "code types" "run types"; gap: .5em 1.6em; align-items: start; }
+  .vars .v-code { grid-area: code; margin: 0; } .vars .v-boxes { grid-area: boxes; } .vars .v-types { grid-area: types; } .vars .v-run { grid-area: run; }
+  .vars .lead { margin: .25em 0 .25em; font-size: .86em; }
+  .vars .v-q .ans { font-weight: 400; color: var(--ink); }
+  .vars .qs li { margin-bottom: .6em; }
+  .vars .v-ans { margin: 0 0 .5em; font-size: .86em; }
+  .vars .v-run .win { font-size: .6em; }
+  body.read .vars { grid-template-columns: 1fr; grid-template-areas: "code" "boxes" "types" "run"; }
+
+  /* labels and boxes that point at lines of code (.annot); the script below sets their top and height */
+  .annot { position: relative; }
+  .annot .co { position: absolute; right: .45em; display: flex; align-items: center; font-size: .86em; z-index: 2; }
+  .annot .co > span { font-family: var(--font); background: var(--gold); color: var(--brown); font-weight: 700; padding: .02em .5em;
+    border-radius: 5px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+  .annot .co > span::before { content: "◀ "; }
+  .annot .cbox { position: absolute; left: .25em; border: 3px solid var(--gold); border-radius: 7px; background: rgba(241,197,0,.08); }
+  .annot.wide .win { width: 822px; }
+  .annot.wide .cbox { width: calc(822px - .5em); }
+  .annot .cbox .lbl { position: absolute; left: calc(100% + .6em); top: 50%; transform: translateY(-50%); width: 290px; font-size: .74em;
+    font-weight: 700; color: var(--brown); background: var(--gold-light); border-left: 6px solid var(--gold); border-radius: 0 6px 6px 0;
+    padding: .12em .5em; line-height: 1.25; }
+  body.read .annot.wide .win { width: auto; }
+
+  /* bug hunt */
+  .errs.hunt { row-gap: .9em; margin-top: .3em; }
+  .errs.hunt figure { position: relative; }
+  .errs.hunt figcaption { margin-top: .25em; }
+  /* drawn bugs crawl behind the content (the script moves them; Stop the bugs pauses them) */
+  .bugfield { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+  .bughunt h2, .bughunt .lead, .bughunt .errs { position: relative; z-index: 1; }
+  .bugfield svg { position: absolute; left: 0; top: 0; width: 54px; height: 54px; opacity: .6; overflow: visible; }
+  .bugfield .la, .bugfield .lb { transform-box: view-box; transform-origin: 0 0; animation: bug-gait .16s ease-in-out infinite alternate; }
+  .bugfield .lb { animation-direction: alternate-reverse; }
+  .bugfield .still .la, .bugfield .still .lb, .bugfield.off .la, .bugfield.off .lb { animation-play-state: paused; }
+  /* an answer squishes bugs: a swatter comes down, the bug flattens onto a splat */
+  .bugfield .body { transform-box: view-box; transform-origin: 0 0; transition: transform .12s ease-in; }
+  .bugfield .squished .body { transform: scale(1.45, .3); }
+  .bugfield .splat { opacity: 0; transform-box: view-box; transform-origin: 0 0; transform: scale(.2); transition: transform .15s ease-out, opacity .15s; }
+  .bugfield .squished .splat { opacity: .75; transform: scale(1); }
+  .bugfield .swat { position: absolute; width: 64px; height: 106px; opacity: 1; animation: bug-swat .7s ease-in both; }
+  @keyframes bug-swat { 0% { transform: translateY(-110px) rotate(-28deg) scale(1.25); opacity: 0; } 38% { transform: none; opacity: 1; }
+    70% { transform: none; opacity: 1; } 100% { transform: translateY(-40px) rotate(-12deg); opacity: 0; } }
+  .bugfield .splat-word { position: absolute; font-weight: 800; font-size: 26px; color: #B71C1C; font-style: italic;
+    animation: bug-word .9s ease-out both; white-space: nowrap; }
+  @keyframes bug-word { 0% { transform: scale(.3); opacity: 0; } 25% { transform: scale(1.15); opacity: 1; } 70% { opacity: 1; } 100% { transform: translateY(-14px); opacity: 0; } }
+  @keyframes bug-gait { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
+  body.present .bugstop { position: absolute; top: 56px; right: 70px; font-size: .62em; z-index: 2; }
+  body.read .bugfield, body.read .bugstop { display: none; }
+  @media (prefers-reduced-motion: reduce) { .bugfield .la, .bugfield .lb { animation: none; } }
+  .we2-out { margin-top: .7em; }
+
+  /* memory boxes */
+  .mem { display: flex; flex-wrap: wrap; gap: .6em .9em; margin: .3em 0 .6em; }
+  .box { text-align: center; }
+  .box .nm { font-family: var(--mono); font-size: .7em; color: var(--brown); font-weight: 700; }
+  .box .val { border: 2.5px solid var(--brown); border-radius: 6px; min-width: 3.2em; padding: .12em .4em; font-family: var(--mono); font-size: .82em; background: #fff; }
+  .box .ty { font-size: .62em; color: var(--muted); }
+  .arr { display: grid; grid-template-columns: repeat(3, 2.6em); }
+  .arr .val { border-radius: 0; min-width: 0; margin-left: -2.5px; }
+  .arr .val:first-child { margin-left: 0; border-radius: 6px 0 0 6px; } .arr .val:nth-child(3) { border-radius: 0 6px 6px 0; }
+  .arr span { font-family: var(--mono); font-size: .58em; color: var(--muted); text-align: center; }
+  .box.flash .val { background: var(--gold-light); }
+
+  /* worked example 1 */
+  .trace { font-size: .86em; }
+  .trace td { height: 1.2em; min-width: 3em; padding: .15em .55em; }
+
+  /* plot with numbered parts */
+  .plotwrap { position: relative; margin: 0; }
+  .plotwrap img { width: 100%; display: block; border: 1px solid #EDEAE7; }
+  .badge { display: inline-block; background: var(--gold); color: var(--brown); font-weight: 700; border-radius: 50%; width: 1.4em; height: 1.4em; line-height: 1.4em; text-align: center; font-size: .9em; }
+  .plotwrap .badge { position: absolute; transform: translate(-50%, -50%); }
+
+  /* CARLA client and server */
+  .cs { display: grid; grid-template-columns: 1fr 8.5em 1fr; gap: .5em; align-items: center; }
+  .card { border: 2.5px solid var(--carla); border-top-width: 12px; border-radius: 10px; padding: .35em .6em .5em; text-align: center; background: #fff; }
+  .card.cl { border-color: var(--py); }
+  .card h3 { margin: 0 0 .2em; font-size: .95em; color: var(--ink); }
+  .card p { margin: 0; font-size: .8em; color: var(--muted); }
+  .card img { width: 100%; height: 96px; object-fit: cover; margin-top: .35em; }
+  .pc { position: relative; border: 3px solid var(--c1); border-radius: 12px; background: #F8F3EF; padding: .75em .7em .55em; margin-top: .6em; }
+  .pc-lbl { position: absolute; top: -.8em; left: 1em; margin: 0; background: var(--c1); color: #fff; font-weight: 700; font-size: .62em; padding: .1em .6em; border-radius: 6px; }
+  .wire { position: relative; height: 170px; }
+  .wire .line { position: absolute; left: 0; right: 0; height: 3px; background: var(--brown); }
+  .wire .l1 { top: 55px; } .wire .l2 { top: 115px; }
+  .wire .lbl { position: absolute; left: 0; right: 0; text-align: center; font-size: .66em; color: var(--brown); font-weight: 700; }
+  .wire .t1 { top: 26px; } .wire .t2 { top: 86px; } .wire .t3 { top: 128px; color: var(--muted); font-weight: 400; line-height: 1.15; }
+  .chip { position: absolute; font-family: var(--mono); font-size: .5em; background: var(--gold); color: var(--brown); border-radius: 4px; padding: .05em .4em; white-space: nowrap; opacity: 0; }
+  .terms { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6em; margin-top: .7em; }
+  .terms div { border-left: 6px solid var(--gold); padding: .1em .5em; font-size: .78em; }
+  .terms b { display: block; color: var(--brown); font-size: 1.08em; }
+
+  /* worked example 2: the run */
+  .run { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: .9em; align-items: start; }
+  .readout { font-size: .74em; display: flex; gap: 1.2em; }
+  .readout b { color: var(--brown); }
+
+  /* where we are going: ROS 2, with automatic emergency braking */
+  .aeb { display: grid; grid-template-columns: 720px 1fr; gap: 1.1em; align-items: start; }
+  .aeb svg { width: 720px; height: auto; display: block; }
+  .aeb .pts { font-size: .8em; }
+  .aeb .pts li { margin-bottom: .45em; }
+  .aeb .lead { margin-top: .2em; }
+  .aeb .lead { color: var(--ros); }
+  .aeb .legend { font-size: .9em; color: var(--muted); margin-left: auto; }
+  .aeb .legend i { display: inline-block; width: .7em; height: .7em; border-radius: 50%; margin: 0 .25em 0 .7em; vertical-align: -.05em; }
+  body.read .aeb { grid-template-columns: 1fr; }
+  body.read .aeb svg { width: 100%; }
+
+  /* read the error */
+  .errs { display: grid; grid-template-columns: 1fr 1fr; gap: .5em 1em; }
+  .errs figure { margin: 0; }
+  .errs img { width: 100%; display: block; box-shadow: 0 2px 6px rgba(0,0,0,.25); border-radius: 4px; }
+  .errs figcaption { font-size: .78em; color: var(--ink); margin-top: .25em; line-height: 1.25; }
+  .errs figcaption b { color: var(--brown); }
+
+  .credits { font-size: .72em; }
+  .credits li { margin-bottom: .3em; }
+
+  @media (prefers-reduced-motion: reduce) { .chip { transition: none; } }
+
+  @media print {
+    .slide { break-inside: avoid; }
+    .lead { font-size: 11.5pt; margin: 0 0 4pt; }
+    .pts, .qs, .small, .key { font-size: 10.5pt; }
+    .pts li { margin-bottom: 3pt; }
+    .win { box-shadow: none; border: .6pt solid #8A817B; font-size: 8.5pt; }
+    .win .bar, .win.term .bar, .win.code .bar { background: #EEEAE7; color: #1F1A17; }
+    .win.term .bar .btns { color: #5E5650; }
+    .win.code .tab { background: #fff; color: #1F1A17; border-top: 2pt solid #0B5394; }
+    .win.code .label { color: #1F1A17; }
+    .win.term pre, .win.code pre, .win.code .panel, .win.code .panel pre { background: #fff; color: #1F1A17; }
+    .win.code .panel .ptab, .win.code .panel .ptab span { color: #1F1A17; border-color: #1F1A17; }
+    .win.term .p, .win.code .panel .p { color: #2E6B12; } .win.term .d, .win.code .panel .d { color: #0B5394; }
+    .win.code .ln { color: #5E5650; }
+    .tk-cm { color: #3F6B2A; } .tk-st { color: #A0400A; } .tk-nu { color: #2E6B12; } .tk-kw { color: #7A1E73; }
+    .tk-df { color: #0B5394; } .tk-fn { color: #6B5A00; } .tk-md { color: #00695C; } .tk-va { color: #1F1A17; }
+    .win pre .hl { background: none; }
+    .win pre .hl, .win pre .hl * { color: inherit; }
+    .anat { font-size: 9pt; }
+    .ans { display: none !important; }
+    .blank { display: inline; }
+    .title-slide .logo img { height: .3in; }
+    .plotwrap { max-width: 4.2in; }
+    .two, .vs, .run, .aeb { display: block; }
+    /* these pairs stay side by side on paper: code beside its boxes, questions beside the work space */
+    .two.pr2 { display: grid; gap: 12pt; }
+    body.read .two.pr2 { grid-template-columns: 1fr 1fr; }
+    .two.pr2 .shot { max-width: none; }
+    .map { max-width: 6.2in; }
+    .api-row, .api-map { gap: 0 12pt; grid-template-columns: repeat(3, 1fr) !important; }
+    .api-st img { height: 1.3in; }
+    .api-st figcaption, .api-map { font-size: 9.5pt; }
+    .launch { max-width: 6in; }
+    .ln-row { grid-template-columns: 2.3in .6in 2.6in !important; }
+    .ln-row .ln-arrow { width: .6in; transform: none !important; }
+    .ln-row img { height: 1.5in; box-shadow: none; border: .6pt solid #8A817B; }
+    .ln-row .win { font-size: 8.5pt; }
+    .menu-list li { font-size: 10pt; } .menu-list li code { font-size: 9pt; } .menu-title { font-size: 14pt; }
+    body.read .vars { grid-template-columns: 1.15fr 1fr; grid-template-areas: "code boxes" "code types" "run types"; }
+    .together { display: grid !important; grid-template-columns: 3.9in 1fr !important; gap: 12pt; }
+    .tg-shot img { box-shadow: none; border: .6pt solid #8A817B; }
+    .recipe { font-size: 10.5pt; }
+    .aeb svg { width: 5.2in; }
+    .shot { max-width: 4.4in; }
+    .vs img { max-width: 3.2in; box-shadow: none; border: .6pt solid #8A817B; }
+    .flip-print { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10pt; }
+    .flip-print figure { margin: 0; min-width: 0; }
+    /* the scaffold is written on: big, with room between lines */
+    .scaffold .win { font-size: 10.5pt !important; margin-top: 6pt; }
+    li.print-only { display: list-item !important; }
+    .scaffold .win pre { line-height: 1.6; }
+    .flip-print img { max-width: 100% !important; border: .6pt solid #8A817B; }
+    .cards { grid-template-columns: repeat(4, 1fr); }
+    .cardx { font-size: 9.5pt; }
+    .errs img { max-width: 100%; box-shadow: none; border: .6pt solid #8A817B; }
+    .card img { height: 1in; }
+    .terms div { font-size: 9.5pt; }
+  }
+
+  /* ---------- videos: real screen recordings of the course USB drive ---------- */
+  .watch { font-size: .62em; white-space: nowrap; }
+  .watch small { font-size: .85em; opacity: .85; }
+  body.present .watch { position: absolute; top: 56px; right: 70px; }
+  body.read .watch { display: inline-block; margin: 0 0 .6em; }
+  dialog.vid { width: min(96vw, 1600px); max-width: none; max-height: 96vh; padding: 0; border: 0; border-radius: 10px;
+    background: #1F1A17; color: #fff; font-family: var(--font); font-size: clamp(15px, 1.35vw, 22px); }
+  dialog.vid::backdrop { background: rgba(0,0,0,.78); }
+  .vid-head { display: flex; align-items: baseline; gap: 1em; padding: .5em 1em .4em; }
+  .vid-head h2 { font-size: 1.3em; margin: 0; padding: 0; color: #fff; border: 0; }
+  .vid-head p { margin: 0; color: #D9D2CC; font-size: .85em; flex: 1; }
+  .vid-body { display: grid; grid-template-columns: minmax(0, 3fr) minmax(12em, 1fr); gap: 1em; padding: 0 1em 1em; align-items: start; }
+  .vid-body video { width: 100%; max-height: 82vh; background: #000; border-radius: 6px; display: block; }
+  .vid-body ol { margin: 0; padding-left: 1.3em; line-height: 1.4; }
+  .vid-body li { margin: 0 0 .6em; }
+  .vid-body code, .vid-body kbd { font-family: var(--mono); background: #3A322D; border-radius: 4px; padding: 0 .25em; font-size: .92em; }
+  .vid-body kbd { border: 1px solid #6E625A; }
+  .vid-head .err { color: #FFB4A8; }
+</style>
+</head>
+<body data-course="ME 4650/5950 Vehicle Dynamics &amp; Control · Lecture 1B">
+<main>
+
+<!-- 1 -->
+<section class="slide title-slide" style="background-image: linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,.35)), url('figures/carla-lead-following.png')">
+  <div class="title-panel">
+    <h1>How Do You Talk to a Simulated Car?</h1>
+    <p class="subtitle">Toolchain: Python, Linux and CARLA</p>
+    <p class="meta">Zachary D. Asher, PhD</p>
+    <p class="meta">ME 4650/5950 Vehicle Dynamics &amp; Control</p>
+    <p class="meta">Lecture 1B, Wednesday, January 13, 2027</p>
+    <p class="logo"><img src="../../common/brand/wmu-logo-horizontal.png" alt="Western Michigan University"></p>
+  </div>
+  <p class="print-only muted">This handout is the notes for the lecture. Write your work in the boxes and blanks.
+  Group-example solutions are posted on eLearning after class, and quiz problems look like them.</p>
+  <p class="print-only muted" style="font-size:.8em">© 2027 Zachary D. Asher, CC BY 4.0. Credits and licenses:
+  github.com/AD-Assurance-Lab/vehicle-dynamics, file lectures/wk01-point-mass/README.md. The WMU logo is a registered
+  trademark of Western Michigan University and is not covered by this license.</p>
+  <p class="notes">No laptops today. Everything runs on the slides or at the podium; you work on paper. Every screen in
+  this lecture is a real screenshot of the course USB drive, or drawn to look like one.</p>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <h2>From your keyboard to the car and back</h2>
+  <svg class="map build" id="map-agenda" viewBox="0 0 1140 520" role="img" aria-labelledby="map-title map-desc">
+    <title id="map-title">Today's toolchain: everything runs inside Linux</title>
+    <desc id="map-desc">You sit at the keyboard and screen, outside the computer. A big box is Linux, the operating system
+    that runs everything; Ubuntu 22.04 is one distribution of Linux. Inside it: the terminal and VS Code, where you type,
+    lead to Python, the language. Python on its own cannot talk to CARLA, the simulated world. The Python API, loaded
+    into Python, carries Python's requests to CARLA and brings the answers back. An application programming interface (API)
+    is that go-between: it takes requests from one program to another and brings back the answers.</desc>
+    <defs><marker id="map-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#532E1F"/></marker>
+      <marker id="map-ah6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#22314E"/></marker>
+      <clipPath id="map-clip"><rect x="652" y="224" width="221" height="94" rx="6"/></clipPath></defs>
+    <g class="you">
+      <rect x="2" y="150" width="120" height="180" rx="12" fill="#fff" stroke="#532E1F" stroke-width="2.5" stroke-dasharray="7 5"/>
+      <text x="62" y="186" text-anchor="middle" font-size="27" font-weight="700" fill="#532E1F">You</text>
+      <rect x="14" y="198" width="96" height="64" rx="5" fill="#1F1A17"/>
+      <image href="screens/desktop.png" x="18" y="202" width="88" height="55" preserveAspectRatio="xMidYMid slice"/>
+      <path d="M55,262 h14 l4,9 h-22 z" fill="#5E5650"/><rect x="44" y="270" width="36" height="4" rx="2" fill="#5E5650"/>
+      <rect x="14" y="282" width="96" height="30" rx="4" fill="#EEEAE7" stroke="#5E5650" stroke-width="1.5"/>
+      <path d="M19,289.5 H106 M23,297.5 H102" stroke="#8A817B" stroke-width="5" stroke-dasharray="8 2.8"/>
+      <path d="M38,305.5 H86" stroke="#8A817B" stroke-width="5"/>
+    </g>
+    <g class="step g-linux">
+      <rect x="150" y="2" width="988" height="516" rx="16" fill="#F8F3EF" stroke="#532E1F" stroke-width="3"/>
+      <path d="M150,78 V18 a16,16 0 0 1 16,-16 H1122 a16,16 0 0 1 16,16 V78 z" fill="#532E1F"/>
+      <circle cx="184" cy="40" r="17" fill="#F1C500"/><text x="184" y="47" text-anchor="middle" font-size="21" font-weight="700" fill="#532E1F">1</text>
+      <text x="212" y="38" font-size="27" font-weight="700" fill="#fff">Linux: the operating system that runs everything</text>
+      <text x="212" y="67" font-size="21" fill="#F3E9E2">Ubuntu 22.04 is one distribution of Linux.</text>
+    </g>
+    <g class="ros-only ros-bg"><rect x="383" y="90" width="745" height="302" rx="14" fill="#E8ECF4" stroke="#22314E" stroke-width="3"/></g>
+    <g class="step g-term">
+      <path d="M124,240 H171" stroke="#532E1F" stroke-width="3" marker-end="url(#map-ah)"/>
+      <rect x="175" y="150" width="190" height="180" rx="12" fill="#fff" stroke="#300A24" stroke-width="3"/>
+      <circle cx="177" cy="152" r="15" fill="#300A24"/><text x="177" y="158" text-anchor="middle" font-size="18" font-weight="700" fill="#fff">2</text>
+      <image href="figures/icon-terminal.png" x="203" y="164" width="60" height="60"/>
+      <image href="figures/icon-vscode.png" x="279" y="167" width="54" height="54"/>
+      <text x="270" y="256" text-anchor="middle" font-size="25" font-weight="700" fill="#300A24">Terminal</text>
+      <text x="270" y="284" text-anchor="middle" font-size="25" font-weight="700" fill="#300A24">and VS Code</text>
+      <text x="270" y="314" text-anchor="middle" class="sub">where you type</text>
+    </g>
+    <g class="step g-py">
+      <path d="M367,240 H391" stroke="#532E1F" stroke-width="3" marker-end="url(#map-ah)"/>
+      <rect class="py-box" x="395" y="150" width="150" height="180" rx="12" fill="#fff" stroke="#2B5B84" stroke-width="3"/>
+      <circle cx="397" cy="152" r="15" fill="#2B5B84"/><text x="397" y="158" text-anchor="middle" font-size="18" font-weight="700" fill="#fff">3</text>
+      <image href="figures/icon-python.png" x="438" y="164" width="64" height="64"/>
+      <text x="470" y="268" text-anchor="middle" font-size="27" font-weight="700" fill="#2B5B84">Python</text>
+      <text x="470" y="298" text-anchor="middle" class="sub">the language</text>
+    </g>
+    <g class="step g-carla">
+      <path class="direct" d="M549,240 H636" stroke="#532E1F" stroke-width="3" marker-start="url(#map-ah)" marker-end="url(#map-ah)"/>
+      <g class="mv-carla">
+        <rect x="640" y="150" width="245" height="180" rx="12" fill="#fff" stroke="#1E6B52" stroke-width="3"/>
+        <circle cx="642" cy="152" r="15" fill="#1E6B52"/><text x="642" y="158" text-anchor="middle" font-size="18" font-weight="700" fill="#fff">4</text>
+        <text x="762" y="186" text-anchor="middle" font-size="27" font-weight="700" fill="#1E6B52">CARLA</text>
+        <text x="762" y="213" text-anchor="middle" class="sub">the simulated world</text>
+        <image href="figures/carla-we2-chase.jpg" x="652" y="224" width="221" height="94" preserveAspectRatio="xMidYMid slice" clip-path="url(#map-clip)"/>
+      </g>
+    </g>
+    <g class="step k-problem">
+      <circle cx="592" cy="240" r="18" fill="#B3261E"/><path d="M584,232 L600,248 M600,232 L584,248" stroke="#fff" stroke-width="4"/>
+      <rect x="175" y="412" width="953" height="94" rx="10" fill="#FBE9E7" stroke="#B3261E" stroke-width="2.5"/>
+      <text x="200" y="452" font-size="25" font-weight="700" fill="#B3261E">Something is wrong</text>
+      <text x="200" y="489" font-size="23" fill="#1F1A17">Python on its own has no command like “place a car” or “read its speed”.</text>
+    </g>
+    <g class="step k-api">
+      <g class="api">
+        <path d="M829,240 H871" stroke="#532E1F" stroke-width="3" marker-start="url(#map-ah)" marker-end="url(#map-ah)"/>
+        <rect x="585" y="166" width="240" height="148" rx="10" fill="#FFF8E1" stroke="#8A5A00" stroke-width="3"/>
+        <circle cx="587" cy="168" r="14" fill="#8A5A00"/><text x="587" y="174" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">5</text>
+        <text x="705" y="210" text-anchor="middle" font-size="26" font-weight="700" fill="#8A5A00">Python API</text>
+        <text x="705" y="240" text-anchor="middle" class="sub">requests out,</text><text x="705" y="264" text-anchor="middle" class="sub">answers back</text>
+        <text x="705" y="298" text-anchor="middle" class="mono" font-size="19" fill="#1F1A17">import carla</text>
+      </g>
+      <g class="band-api">
+        <rect x="175" y="412" width="953" height="94" rx="10" fill="#FCEFB4"/><rect x="175" y="412" width="10" height="94" fill="#8A5A00"/>
+        <text x="204" y="451" font-size="23" font-weight="700" fill="#6B4500">Application Programming Interface (API)</text>
+        <text x="204" y="488" font-size="23" fill="#1F1A17">The go-between that carries Python’s requests to CARLA and brings back the answers.</text>
+      </g>
+    </g>
+    <g class="ros-only k-ros">
+      <circle cx="385" cy="92" r="15" fill="#22314E"/><text x="385" y="98" text-anchor="middle" font-size="18" font-weight="700" fill="#fff">6</text>
+      <text x="409" y="128" font-size="24" font-weight="700" fill="#22314E">ROS 2: programs share data over topics</text>
+      <path d="M470,334 V364 H997 V334" fill="none" stroke="#22314E" stroke-width="3" marker-start="url(#map-ah6)" marker-end="url(#map-ah6)"/>
+      <rect x="668" y="349" width="130" height="30" rx="15" fill="#FCEFB4" stroke="#22314E" stroke-width="1.5"/>
+      <text x="733" y="370" text-anchor="middle" class="mono" font-size="20" fill="#1F1A17">topics</text>
+      <path d="M593,174 L817,306 M817,174 L593,306" stroke="#B3261E" stroke-width="9" stroke-linecap="round"/>
+      <rect x="592" y="221" width="226" height="38" rx="6" fill="#B3261E"/>
+      <text x="705" y="247" text-anchor="middle" font-size="20" font-weight="700" fill="#fff">not needed to drive</text>
+      <rect x="175" y="412" width="953" height="94" rx="10" fill="#E8ECF4"/><rect x="175" y="412" width="10" height="94" fill="#22314E"/>
+      <text x="204" y="451" font-size="23" font-weight="700" fill="#22314E">ROS 2, Robot Operating System 2: programs share data over named topics.</text>
+      <text x="204" y="488" font-size="23" fill="#1F1A17">Your driving code uses topics, not the API. A short setup script still places the car.</text>
+    </g>
+  </svg>
+  <p class="notes">Tell them what you will tell them, one click at a time: the whole path from a key you press to a car
+  that brakes, and the data coming back. First Linux, the operating system: everything today runs inside it. Ubuntu is
+  one distribution of Linux. Then the terminal and VS Code, where you type; then Python; then CARLA, the simulator, with
+  Python talking straight to it. At the red X, ask what is wrong: Python knows numbers and loops, not cars. Then CARLA
+  slides over and the Python API appears inside Python: the commands CARLA understands, loaded with import carla. The
+  next slide explains what an API is.</p>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <h2>What is an API? Think of a waiter</h2>
+  <div class="api-row" id="api-row">
+    <figure class="api-st"><img src="photos/restaurant-order.jpg" alt="Diners at a restaurant table give their order to a waiter." style="object-position: 28% 45%">
+      <figcaption>You order from the menu</figcaption></figure>
+    <figure class="api-st"><img src="photos/waiter-plates.jpg" alt="A waiter carries four plates of food across a dining hall." style="object-position: 50% 35%">
+      <figcaption>The waiter carries it</figcaption></figure>
+    <figure class="api-st"><img src="photos/kitchen-cooking.jpg" alt="Cooks at work over open flames in a restaurant kitchen." style="object-position: 45% 50%">
+      <figcaption>The kitchen does the work</figcaption></figure>
+    <div class="api-lane no-print" id="api-lane" aria-hidden="true"></div>
+  </div>
+  <div class="api-map step" id="api-map">
+    <span class="m-py">your Python script</span><span class="m-api">the Python API</span><span class="m-carla">CARLA</span>
+  </div>
+  <div class="controls no-print"><button class="btn" id="api-play" type="button">Place an order</button></div>
+  <p class="sr-only" id="api-said" aria-live="polite"></p>
+  <p class="key step"><span class="term">Application Programming Interface (API):</span> the go-between that takes
+  requests from one program to another and brings back the answers. Like a waiter, it takes only orders on its menu, and
+  you never go into the kitchen.</p>
+  <p class="notes">A short detour. At a restaurant you do not walk into the kitchen and cook. You read the menu, tell the
+  waiter, and the waiter brings back your food. Click Place an order: the order goes to the kitchen and the plate comes
+  back. Then the click that maps it: your script is the diner, the Python API is the waiter, CARLA is the kitchen. The
+  menu is the list of requests CARLA accepts: place a car, drive it, tell me its speed. Click Place an order again: now
+  the same trip carries real API calls. You never see how CARLA computes the physics, just as you never see the stove.</p>
+</section>
+
+<!-- 4 -->
+<section class="slide no-print">
+  <h2>From your keyboard to the car and back</h2>
+  <div class="map-slot" data-map="ros" data-label="The same drawing with the Python API inside Python. Then a ROS 2 box appears around Python and CARLA: programs share data over topics, and the API is crossed out, not needed to drive."></div>
+  <p class="notes">Back to the map, API in place. One click for where the course goes after this week: ROS 2. With ROS 2,
+  CARLA publishes its sensors on topics and takes driving commands from a topic, so your driving code makes no API calls.
+  One setup step still uses the API to place the car and its sensors; after that, everything goes over topics. The last
+  slide today comes back to ROS 2.</p>
+</section>
+
+<!-- 5 -->
+<section class="slide no-print" data-part="1">
+  <h2>Part 1: Linux</h2>
+  <div class="map-slot" data-map="f-linux" data-label="The map with Linux, the big box, outlined in a rainbow. Everything inside it is grayed out."></div>
+  <p class="notes">First the box everything runs in. Today only two parts of it: the desktop and the terminal.</p>
+</section>
+
+<!-- 6 -->
+<section class="slide" data-part="1">
+  <h2>Linux: the system under CARLA</h2>
+  <button class="btn watch no-print" type="button" data-video="vid-terminal"><span aria-hidden="true">&#9654; </span>Watch it <small>(13 s video)</small></button>
+  <p class="lead">The lab computers start Ubuntu Linux from the course USB drive.</p>
+  <div class="two pr2" style="grid-template-columns: 1.35fr 1fr">
+    <figure class="shot">
+      <img src="screens/desktop.png" alt="The course USB drive's Ubuntu desktop. A dock on the left holds Firefox, Files, Terminal, VS Code and CARLA. The background reads ME 4650, CARLA 0.9.16, ROS 2 Humble, Python, with steps for shutting down: save your files, press the power button once, click Power Off if asked, wait, then remove the USB.">
+      <span class="tag" aria-hidden="true" style="left: 6.2%; top: 16.6%">Files</span>
+      <span class="tag" aria-hidden="true" style="left: 6.2%; top: 25%">Terminal</span>
+      <span class="tag" aria-hidden="true" style="left: 6.2%; top: 33.6%">VS Code</span>
+      <span class="tag" aria-hidden="true" style="left: 6.2%; top: 42.2%">CARLA</span>
+      <svg class="brace" viewBox="0 0 600 30" aria-hidden="true"><path d="M2,2 Q2,15 22,15 H280 Q300,15 300,28 Q300,15 320,15 H578 Q598,15 598,2" fill="none" stroke="#532E1F" stroke-width="3"/></svg>
+      <figcaption>All of this screen is Ubuntu Linux</figcaption>
+    </figure>
+    <ul class="pts">
+      <li>An operating system<small>like Windows or macOS, but free</small></li>
+      <li>Ubuntu 22.04<small>one distribution of Linux</small></li>
+      <li>Built for robots<small>CARLA and ROS 2 run on it</small></li>
+    </ul>
+  </div>
+  <p class="notes">Start with the video: open a terminal from the dock. You do not install anything. Your work lives on the drive in your home folder. The kernel is the core
+  of Linux that talks to the hardware; a distribution such as Ubuntu is the kernel plus everything around it. Engineers
+  use Linux because it runs for days without a restart and because the terminal does exactly what you type. Shut down
+  with the power button, then pull the drive.</p>
+</section>
+
+<!-- 7 -->
+<section class="slide" data-part="1">
+  <h2>The terminal</h2>
+  <div class="two" style="grid-template-columns: 1.3fr 1fr">
+    <div class="screen-only interactive simterm" data-fallback="cmd-table">
+      <div class="win term" style="font-size:.62em">
+        <div class="bar">student@me4650:&nbsp;<span id="term-title">~</span><span class="btns" aria-hidden="true">– ▢ ✕</span></div>
+        <pre class="log" id="term-log" role="log" aria-label="Terminal output"></pre>
+        <form id="term-form">
+          <label for="term-in">student@me4650:<span class="d" id="term-cwd">~</span>$</label>
+          <input id="term-in" type="text" autocomplete="off" spellcheck="false">
+        </form>
+      </div>
+      <div class="controls">
+        <button class="btn" id="term-next" type="button">Type the next demo command</button>
+        <button class="btn secondary" id="term-reset" type="button">Reset</button>
+      </div>
+    </div>
+    <div>
+      <div class="anat screen-only" data-fallback="cmd-table" role="img" aria-label="The prompt: student is who you are, me4650 is the computer, tilde slash lab1 is the folder, and the dollar sign means ready.">
+        <span aria-hidden="true"><i>who</i><b class="p">student</b></span><span aria-hidden="true"><i>&nbsp;</i><b class="p">@</b></span><span aria-hidden="true"><i>computer</i><b class="p">me4650</b></span><span aria-hidden="true"><i>&nbsp;</i>:</span><span aria-hidden="true"><i>folder</i><b class="d">~/lab1</b></span><span aria-hidden="true"><i>ready</i>$</span>
+      </div>
+      <div class="tree screen-only" data-fallback="cmd-table">
+        <div id="tree"></div>
+      </div>
+      <p class="print-only">The prompt <code>student@me4650:~/lab1$</code> reads: who (student), which computer (me4650), which folder (~/lab1), ready ($).</p>
+      <table class="cmds print-only" id="cmd-table">
+        <caption>Commands to know</caption>
+        <thead><tr><th scope="col">Command</th><th scope="col">What it does</th></tr></thead>
+        <tbody>
+          <tr><td>pwd</td><td>print the folder you are in</td></tr>
+          <tr><td>ls</td><td>list what is in it</td></tr>
+          <tr><td>cd name</td><td>go into a folder; <code>cd ..</code> goes up one; <code>~</code> is your home folder</td></tr>
+          <tr><td>mkdir name</td><td>make a folder</td></tr>
+          <tr><td>touch name</td><td>make an empty file</td></tr>
+          <tr><td>echo "text" &gt; file</td><td>write text into a file</td></tr>
+          <tr><td>cat file</td><td>show a file</td></tr>
+          <tr><td>python3 file.py</td><td>run a Python program</td></tr>
+          <tr><td>code .</td><td>open this folder in VS Code</td></tr>
+          <tr><td>Tab, ↑, Ctrl+C</td><td>finish a name, last command, stop a program</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p class="notes">Read the prompt first: who, which computer, which folder, ready. Then click the demo button to walk
+  through pwd, ls, mkdir, cd, touch, echo, cat and python3, or type your own. The gold folder is where you are; it moves
+  with every cd. The folders match the real USB drive. This is a simulation; nothing runs on the classroom computer. The
+  commands are in a table in the handout.</p>
+</section>
+
+<!-- 8 -->
+<section class="slide group-example" data-part="1">
+  <span class="example-label">Group example 1</span>
+  <h2>Write the commands</h2>
+  <p class="lead">You are in your home folder. Write the command for each step.</p>
+  <table class="cmds steps">
+    <thead><tr><th scope="col">Step</th><th scope="col">Command</th></tr></thead>
+    <tbody>
+      <tr><td>1. Make a folder <code>brake_test</code></td><td><span class="ans step"><span class="abbr"><b>m</b><s>a</s><b>k</b><s>e </s><b>dir</b><s>ectory</s></span> brake_test</span><span class="step shrink" aria-hidden="true"></span><span class="blank">______________</span></td></tr>
+      <tr><td>2. Go into it</td><td><span class="ans step"><span class="abbr"><b>c</b><s>hange </s><b>d</b><s>irectory</s></span> brake_test</span><span class="step shrink" aria-hidden="true"></span><span class="blank">______________</span></td></tr>
+      <tr><td>3. Make an empty file <code>stop.py</code></td><td><span class="ans step">touch stop.py</span><span class="blank">______________</span></td></tr>
+      <tr><td>4. Put <code>print("Stopped!")</code> in it</td><td><span class="ans step">echo 'print("Stopped!")' &gt; stop.py</span><span class="blank">______________</span></td></tr>
+      <tr><td>5. Show the file</td><td><span class="ans step"><span class="abbr"><s>con</s><b>cat</b><s>enate</s></span> stop.py</span><span class="step shrink" aria-hidden="true"></span><span class="blank">______________</span></td></tr>
+      <tr><td>6. Run it</td><td><span class="ans step">python3 stop.py</span><span class="blank">______________</span></td></tr>
+      <tr class="note6"><td colspan="2"><span class="step">▲ You can run Python programs this way, all in the terminal. We will use VS Code instead.</span></td></tr>
+      <tr><td>7. Go back up one folder</td><td><span class="ans step">cd ..</span><span class="blank">______________</span></td></tr>
+    </tbody>
+  </table>
+  <p class="notes">Then type the answers into the terminal slide to check them. Step 4: wrap the Python in single quotes
+  so the double quotes inside reach the file. In the lab you would open stop.py in VS Code instead of using echo. mkdir, cd and cat first appear as the words they
+  stand for: make directory, change directory, concatenate (cat joins files; with one file it just shows it). cd .. goes up
+  one folder; here that is home.</p>
+</section>
+
+<!-- 9 -->
+<section class="slide" data-part="1">
+  <h2>The terminal starts your programs</h2>
+  <p class="lead">Type a program's name and press Enter.</p>
+  <div class="launch">
+    <div class="ln-row step">
+      <div class="win term"><div class="bar">student@me4650: ~/hello<span class="btns" aria-hidden="true">– ▢ ✕</span></div>
+<pre class="sh" data-cwd="~/hello">$ code .</pre></div>
+      <svg class="ln-arrow" viewBox="0 0 120 40" aria-hidden="true"><path d="M4,20 H100" stroke="#532E1F" stroke-width="4"/><path d="M98,9 L117,20 L98,31 z" fill="#532E1F"/></svg>
+      <figure><img src="screens/hello2-vscode-open.png" alt="VS Code open, with the folder hello in its Explorer on the left.">
+        <figcaption><span class="tag-c">VS Code</span> opens this folder: you write Python here</figcaption></figure>
+    </div>
+    <div class="ln-row step">
+      <div class="win term"><div class="bar">student@me4650: ~<span class="btns" aria-hidden="true">– ▢ ✕</span></div>
+<pre class="sh" data-cwd="~">$ carla</pre></div>
+      <svg class="ln-arrow" viewBox="0 0 120 40" aria-hidden="true"><path d="M4,20 H100" stroke="#532E1F" stroke-width="4"/><path d="M98,9 L117,20 L98,31 z" fill="#532E1F"/></svg>
+      <figure><img src="screens/carla-window.jpg" alt="CARLA's window on the course drive: a city of tall buildings and palm trees.">
+        <figcaption><span class="tag-carla">CARLA</span> starts: the simulated world<br><small><code>carla</code> is the course drive's shortcut for <code>/opt/carla/CarlaUE4.sh</code></small></figcaption></figure>
+    </div>
+  </div>
+  <p class="notes">This closes the Linux part and opens the next two. code . opens VS Code in the folder you are in; the dot
+  means this folder. carla starts the simulator and keeps that terminal busy while it runs, so scripts go in a second
+  terminal. Both screens are real, from the course drive.</p>
+</section>
+
+<!-- 10 -->
+<section class="slide no-print" data-part="2">
+  <h2>Part 2: Python and its API</h2>
+  <div class="map-slot" data-map="f-python" data-label="The map with Python, and the Python API inside it, outlined in a rainbow. Everything else is grayed out."></div>
+  <p class="notes">Next the language, written in VS Code, and the API that lets it talk to CARLA.</p>
+</section>
+
+<!-- 11 -->
+<section class="slide" data-part="2">
+  <h2>Terminal or VS Code?</h2>
+  <div class="vs split">
+    <div>
+      <h3><span class="tag-t">Terminal</span> talk to the computer</h3>
+      <img src="screens/window-terminal.png" alt="A real Ubuntu terminal window, dark purple. Each line starts with the prompt student@me4650:~/lab1$. The commands ls, cat brake.py and python3 brake.py were typed, and the output stops in 4.0 s is printed.">
+      <ul class="pts">
+        <li>One command per line</li>
+        <li>Runs when you press Enter</li>
+      </ul>
+    </div>
+    <div class="step">
+      <h3><span class="tag-c">VS Code</span> write a file you keep</h3>
+      <img src="screens/window-vscode.png" alt="A real VS Code window, dark gray, with the tab brake.py and four numbered lines of Python: v equals 20.0, a_b equals 5.0, t equals v over a_b, and a print line. Comments are green, strings orange.">
+      <ul class="pts">
+        <li>Python, saved in a <code>.py</code> file</li>
+        <li>Runs only after you save and run it</li>
+      </ul>
+    </div>
+  </div>
+  <p class="key step">VS Code's TERMINAL panel is a real terminal too: same commands, same rules.</p>
+  <p class="notes">These are the real windows on the USB drive. From here on, every code box looks like one of these two:
+  dark purple with a prompt is the terminal; dark gray with a file tab and line numbers is VS Code. A command acts right
+  away, and a folder or file it makes stays on the drive. A dot on the VS Code tab means the file is not saved yet. Most
+  confusion in the first lab is typing into the wrong window.</p>
+</section>
+
+<!-- 12 -->
+<section class="slide" data-part="2">
+  <h2>Hello, world: write, save, run</h2>
+  <button class="btn watch no-print" type="button" data-video="vid-vscode"><span aria-hidden="true">&#9654; </span>Watch it <small>(33 s video)</small></button>
+  <div class="flip screen-only" data-fallback="flip-print">
+    <figure class="frame"><img src="screens/hello1-terminal.png" alt="Terminal window. The commands mkdir hello and cd hello have run; the prompt shows ~/hello, and code . is typed.">
+      <figcaption><b>1</b><span class="tag-t">Terminal</span><br>Make a folder, go in, open it in VS Code:<br><code>code .</code></figcaption></figure>
+    <figure class="frame step"><img src="screens/hello2-vscode-open.png" alt="VS Code open with an empty folder HELLO in the Explorer on the left.">
+      <figcaption><b>2</b><span class="tag-c">VS Code</span><br>The folder opens on the left. Empty.</figcaption></figure>
+    <figure class="frame step"><img src="screens/hello3-new-file.png" alt="VS Code with a new empty file hello.py open in the editor and listed under HELLO.">
+      <figcaption><b>3</b><span class="tag-c">VS Code</span><br>New File: <code>hello.py</code></figcaption></figure>
+    <figure class="frame step"><img src="screens/hello4-typed.png" alt="VS Code: hello.py holds one line, print open parenthesis, quote, Hello, world!, quote, close parenthesis. The tab shows a white dot.">
+      <figcaption><b>4</b><span class="tag-c">VS Code</span><br>Type one line.<br>Dot on the tab: not saved.</figcaption></figure>
+    <figure class="frame step"><img src="screens/hello5-saved.png" alt="The same line, and the dot on the tab is now an X: the file is saved.">
+      <figcaption><b>5</b><span class="tag-c">VS Code</span><br><code>Ctrl+S</code> saves.<br>The dot becomes ×.</figcaption></figure>
+    <figure class="frame step"><img src="screens/hello6-run.png" alt="VS Code with its TERMINAL panel open below the code. The command python3 hello.py printed Hello, world!">
+      <figcaption><b>6</b><span class="tag-t">Terminal</span> in VS Code<br>Open the panel: <code>Ctrl+`</code><br>Run: <code>python3 hello.py</code></figcaption></figure>
+  </div>
+  <div class="print-only flip-print" id="flip-print">
+    <figure><img src="screens/hello4-typed.png" alt="VS Code with one line of Python in hello.py, not yet saved."><figcaption>Write the program in VS Code, then save with Ctrl+S.</figcaption></figure>
+    <figure><img src="screens/hello6-run.png" alt="VS Code's TERMINAL panel: python3 hello.py printed Hello, world!"><figcaption>Run it in a terminal: python3 hello.py.</figcaption></figure>
+  </div>
+  <p class="notes">The classic first program. Start with the video, then click through: each click is the next real
+  screen. Point at the window title bar each time: Terminal or Visual Studio Code. The dot in code . means this folder.
+  Ctrl+` is Control and the backtick key, top left under Esc. The unsaved dot catches people every year: an unsaved file
+  runs the old version. The course drive also saves a file when you click away from it, but Ctrl+S is the habit to build.</p>
+</section>
+
+<!-- 13 -->
+<section class="slide group-example" data-part="2">
+  <span class="example-label">Group example 2</span>
+  <h2>Where does it go?</h2>
+  <p class="lead">Write T for the terminal <img class="ico" src="figures/icon-terminal.png" alt=""> or V for a Python file in VS Code <img class="ico" src="figures/icon-vscode.png" alt="">.</p>
+  <div class="cards">
+    <div class="cardx">cd lab1<span class="ans step t"><img src="figures/icon-terminal.png" alt="">Terminal</span><span class="blank">____</span></div>
+    <div class="cardx">v = 20.0<span class="ans step c"><img src="figures/icon-vscode.png" alt="">VS Code</span><span class="blank">____</span></div>
+    <div class="cardx">python3 brake.py<span class="ans step t"><img src="figures/icon-terminal.png" alt="">Terminal</span><span class="blank">____</span></div>
+    <div class="cardx">import carla<span class="ans step c"><img src="figures/icon-vscode.png" alt="">VS Code</span><span class="blank">____</span></div>
+    <div class="cardx">ls<span class="ans step t"><img src="figures/icon-terminal.png" alt="">Terminal</span><span class="blank">____</span></div>
+    <div class="cardx">for i in range(10):<span class="ans step c"><img src="figures/icon-vscode.png" alt="">VS Code</span><span class="blank">____</span></div>
+    <div class="cardx">code .<span class="ans step t"><img src="figures/icon-terminal.png" alt="">Terminal</span><span class="blank">____</span></div>
+    <div class="cardx">carla<span class="ans step t"><img src="figures/icon-terminal.png" alt="">Terminal: starts CARLA</span><span class="blank">____</span></div>
+  </div>
+  <p class="notes">Two minutes with a neighbor. Two traps: code . is the command that opens VS Code, and carla on its own
+  line is the command that starts the simulator. Lowercase carla after import is the Python library. If a group is
+  stuck: a command starts with a program name; Python has =, import and colons.</p>
+</section>
+
+<!-- 14 -->
+<section class="slide" data-part="2">
+  <h2>Python, if you know MATLAB</h2>
+  <table class="mp">
+    <thead><tr><th scope="col">To do this</th><th scope="col">MATLAB</th><th scope="col">Python</th></tr></thead>
+    <tbody>
+      <tr><td>Comment</td><td>% speed in m/s</td><td># speed in m/s</td></tr>
+      <tr><td>Power</td><td>v^2</td><td>v**2</td></tr>
+      <tr><td>Arrays and math</td><td><em class="desc">(built in)</em></td><td>import numpy as np</td></tr>
+      <tr><td>Array</td><td>v = [10 20 30]</td><td>v = np.array([10, 20, 30])</td></tr>
+      <tr><td>First element</td><td>v(1)</td><td>v[0]</td></tr>
+      <tr><td>Loop 5 times</td><td><span class="ml">for i = 1:5
+    disp(i)
+end</span></td><td><span class="ml">for i in range(5):
+    print(i)</span> <em class="desc">(i = 0 to 4)</em></td></tr>
+      <tr><td>Function</td><td><span class="ml">function y = f(x)
+    y = 2*x;
+end</span></td><td><span class="ml">def f(x):
+    y = 2*x
+    return y</span></td></tr>
+    </tbody>
+  </table>
+  <p class="key step">Python counts from 0, and indentation decides what is inside a loop or function.</p>
+  <p class="notes">Python is the language of robotics and AI tools, and it is how you talk to CARLA and ROS 2. np is the
+  usual short name for NumPy, the array library; plt for Matplotlib, the plotting library.</p>
+</section>
+
+<!-- 15 -->
+<section class="slide" data-part="2">
+  <h2>Variables and arrays: names on boxes</h2>
+  <div class="vars">
+    <div class="win code v-code" style="font-size:.6em">
+      <div class="bar"><span class="tab">car.py</span><span class="label" aria-hidden="true">VS Code</span></div>
+<pre class="py">import numpy as np
+
+mass = 1200          # int (kg)
+speed = 25.5         # float (m/s)
+model = "MKZ"        # str: text
+abs_on = True        # bool
+
+speeds = np.array([10, 20, 30])
+print(mass * speed)
+print(speeds[0], speeds * 3.6)</pre>
+    </div>
+    <div class="v-boxes step">
+      <div class="mem" aria-hidden="true">
+        <div class="box"><div class="nm">mass</div><div class="val">1200</div><div class="ty">int</div></div>
+        <div class="box"><div class="nm">speed</div><div class="val">25.5</div><div class="ty">float</div></div>
+        <div class="box"><div class="nm">model</div><div class="val">"MKZ"</div><div class="ty">str</div></div>
+        <div class="box"><div class="nm">abs_on</div><div class="val">True</div><div class="ty">bool</div></div>
+      </div>
+      <div class="box" style="text-align:left" aria-hidden="true"><div class="nm">speeds</div>
+        <div class="arr"><div class="val">10</div><div class="val">20</div><div class="val">30</div><span>[0]</span><span>[1]</span><span>[2]</span></div></div>
+      <p class="sr-only">Each variable is a labeled box: mass holds 1200, an int; speed holds 25.5, a float; model holds the
+      text MKZ, a str; abs_on holds True, a bool. The array speeds is a row of three boxes holding 10, 20 and 30 at indexes 0, 1 and 2.</p>
+    </div>
+    <div class="v-types step">
+      <p class="lead">What is the type of each variable?</p>
+      <ol class="qs">
+        <li><code>gear = 3</code> <span class="ans step">int</span><span class="blank">________</span></li>
+        <li><code>fuel_economy = 14.2</code> <span class="ans step">float</span><span class="blank">________</span></li>
+        <li><code>headlights_on = True</code> <span class="ans step">bool</span><span class="blank">________</span></li>
+      </ol>
+    </div>
+    <div class="v-run">
+      <p class="lead v-q"><span class="step">How do you run <code>car.py</code>?</span> <span class="ans step"><span class="tag-t">Terminal</span> <code>python3 car.py</code></span><span class="blank">______________</span></p>
+      <p class="lead step">What does it print?</p>
+      <div class="win code step no-print"><div class="panel"><div class="ptab"><span>TERMINAL</span></div>
+<pre class="sh" data-cwd="~/lab1">$ python3 car.py
+30600.0
+10 [ 36.  72. 108.]</pre></div></div>
+      <div class="print-only workspace" style="--h: .6in" aria-hidden="true"></div>
+    </div>
+  </div>
+  <p class="notes">A variable is a name stuck on a box. int is a whole number, float a decimal, str text in quotes, bool
+  True or False. First click: the boxes. Then the three types, one click each. Then how to run it: python3 car.py in a
+  terminal, or in VS Code's TERMINAL panel. Then the output: an int times a float gives a float, hence 30600.0. A NumPy
+  array does math on every element in one line: times 3.6 converts all three speeds to km/h.</p>
+</section>
+
+<!-- 16 -->
+<section class="slide" data-part="2">
+  <h2>Functions and loops</h2>
+  <div class="two split pr2" style="grid-template-columns: 1.45fr 1fr">
+    <div>
+      <div class="annot">
+        <div class="win code" style="font-size:.6em">
+          <div class="bar"><span class="tab">stop.py</span><span class="label" aria-hidden="true">VS Code</span></div>
+<pre class="py">def time_to_stop(v0, a_b):
+    t = v0 / a_b
+    return t
+
+print(time_to_stop(30.0, 7.5))</pre>
+          <span class="co step no-print" data-l="1"><span>def names it</span></span>
+          <span class="co step no-print" data-l="2"><span>indented lines do the work</span></span>
+          <span class="co step no-print" data-l="3"><span>return hands back the answer</span></span>
+          <span class="co step no-print" data-l="5"><span>call it</span></span>
+          <div class="panel step no-print"><div class="ptab"><span>TERMINAL</span></div>
+<pre class="sh" data-cwd="~/lab1">$ python3 stop.py
+4.0</pre></div>
+        </div>
+      </div>
+      <p class="print-only small">def names the function and its inputs. The indented lines do the work. return hands back the answer.</p>
+    </div>
+    <div>
+      <div class="win code" style="font-size:.6em">
+        <div class="bar"><span class="tab">loop.py</span><span class="label" aria-hidden="true">VS Code</span></div>
+<pre class="py">for i in range(3):
+    print("tick", i)
+
+v = 9.0
+while v > 0:
+    v = max(v - 4.0, 0.0)
+    print(v)</pre>
+        <div class="panel step no-print"><div class="ptab"><span>TERMINAL</span></div>
+<pre class="sh" data-cwd="~/lab1">$ python3 loop.py
+tick 0
+tick 1
+tick 2
+5.0
+1.0
+0.0</pre></div>
+      </div>
+      <div class="print-only workspace" style="--h: .9in" aria-hidden="true"></div>
+    </div>
+  </div>
+  <p class="notes">One click per label: def names the function and lists its inputs, the indented lines do the work, return
+  hands back the answer, and the last line calls it with numbers. Time to stop comes from v = v0 − a_b t with v = 0. Then
+  the output. The colon and the indent mark what repeats. for repeats a fixed number of times; while checks its condition
+  before every pass. max picks the larger of two numbers, so v never goes below zero.</p>
+</section>
+
+<!-- 17 -->
+<section class="slide worked-example" data-part="2">
+  <span class="example-label">Worked example 1</span>
+  <h2>Be the computer</h2>
+  <div class="two we1 pr2" style="grid-template-columns: 1.05fr 1fr">
+    <div>
+      <div class="win code">
+        <div class="bar"><span class="tab">brake_loop.py</span><span class="label" aria-hidden="true">VS Code</span></div>
+<pre class="py" id="we1-code" data-lines><span>v = 20.0       # speed, m/s</span>
+<span>a_b = 6.0      # braking, m/s^2</span>
+<span>dt = 1.0       # time step, s</span>
+<span>t = 0.0</span>
+<span>while v > 0:</span>
+<span>    t = t + dt</span>
+<span>    v = max(v - a_b * dt, 0.0)</span>
+<span>    print(t, v)</span>
+<span>print("stopped after", t, "s")</span></pre>
+      </div>
+      <ol class="qs">
+        <li>What does each pass print?</li>
+        <li>On which pass does <code>max</code> matter?</li>
+        <li>With <code>dt = 0.5</code>, how many passes?</li>
+      </ol>
+    </div>
+    <div>
+      <div class="screen-only interactive" data-fallback="we1-space">
+        <div class="controls"><button class="btn" id="we1-step" type="button">Step one line</button>
+          <button class="btn secondary" id="we1-reset" type="button">Start over</button></div>
+        <div class="mem" aria-hidden="true" style="margin:.4em 0 .3em">
+          <div class="box" id="we1-bt"><div class="nm">t</div><div class="val" id="we1-t">·</div></div>
+          <div class="box" id="we1-bv"><div class="nm">v</div><div class="val" id="we1-v">·</div></div>
+          <div class="box" id="we1-ba"><div class="nm">a_b</div><div class="val" id="we1-a">·</div></div>
+          <div class="box" id="we1-bd"><div class="nm">dt</div><div class="val" id="we1-dt">·</div></div>
+        </div>
+        <div class="win code" style="font-size:.6em"><div class="panel"><div class="ptab"><span>TERMINAL</span></div><pre id="we1-out"> </pre></div></div>
+        <p class="sr-only" id="we1-said" aria-live="polite"></p>
+      </div>
+      <div class="print-only workspace" id="we1-space" style="--h: 2.2in" aria-hidden="true"></div>
+    </div>
+  </div>
+  <p class="notes">Work it on the board first, then step through it here to check. One click runs one line: the gold bar is
+  the line about to run, and the box that just changed turns gold. A table on the board helps: pass, t, v, printed.
+  Passes: t = 1, 2, 3, 4 and v = 14, 8, 2, 0, so it prints 1.0 14.0, 2.0 8.0, 3.0 2.0, 4.0 0.0, then stopped after 4.0 s.
+  max matters on pass 4: 2 − 6 = −4, so v becomes 0. With dt = 0.5, v drops 3 per pass: 17, 14, 11, 8, 5, 2, 0, seven
+  passes.</p>
+</section>
+
+<!-- 18 -->
+<section class="slide" data-part="2">
+  <h2>Plotting with Matplotlib</h2>
+  <div class="two pr2" style="grid-template-columns: 1.1fr 1fr">
+    <div class="annot">
+    <div class="win code" style="font-size:.6em">
+      <div class="bar"><span class="tab">test_drive.py</span><span class="label" aria-hidden="true">VS Code</span></div>
+<pre class="py">import numpy as np
+import matplotlib.pyplot as plt
+
+time = np.arange(11)   # 0 to 10 s
+speed = np.array([0, 10, 25, 35, 50, 55,
+                  60, 55, 45, 30, 0])
+
+plt.plot(time, speed, marker="o",
+         label="Speed")                # 1
+plt.title("Vehicle Speed Over Time")   # 2
+plt.xlabel("Time (s)")                 # 3
+plt.ylabel("Speed (km/h)")             # 4
+plt.legend()                           # 5
+plt.grid(True)                         # 6
+plt.show()</pre>
+      <span class="co step no-print" data-l="1"><span>np: NumPy, arrays and math</span></span>
+      <span class="co step no-print" data-l="2"><span>plt: plots</span></span>
+    </div>
+    <p class="print-only small">np is NumPy, the array library; plt is Matplotlib's plotting part.</p>
+    </div>
+    <figure class="plotwrap">
+      <img src="figures/py-test-drive.png" alt="The plot this code draws: speed in km/h against time in seconds, a blue line with dots rising from 0 to 60 at 6 s and falling back to 0 at 10 s, titled Vehicle Speed Over Time, with a legend and a grid.">
+      <span class="badge step" style="left: 28%; top: 41%" aria-hidden="true">1</span>
+      <span class="badge step" style="left: 27%; top: 5.5%" aria-hidden="true">2</span>
+      <span class="badge step" style="left: 66%; top: 94%" aria-hidden="true">3</span>
+      <span class="badge step" style="left: 3.5%; top: 25%" aria-hidden="true">4</span>
+      <span class="badge step" style="left: 77%; top: 13%" aria-hidden="true">5</span>
+      <span class="badge step" style="left: 80%; top: 52%" aria-hidden="true">6</span>
+    </figure>
+  </div>
+  <p class="notes">Each numbered line draws the part with the same number. plt.show opens the window. Always label axes with
+  units: you cannot debug what you cannot see.</p>
+</section>
+
+<!-- 19 -->
+<section class="slide group-example" data-part="2">
+  <span class="example-label">Group example 3</span>
+  <h2>Write it by hand: a braking car</h2>
+  <div class="two scaffold" style="grid-template-columns: 1fr 1.1fr">
+    <div>
+      <p class="lead">A car at 72 km/h brakes at a constant 4 m/s². Fill in the blanks so the program:</p>
+      <ol class="qs">
+        <li>converts 72 km/h to m/s with a function</li>
+        <li>finds the speed every 1 s until it stops, kept in lists</li>
+        <li>plots speed against time, axes labeled</li>
+        <li class="print-only">Sketch the plot you expect.</li>
+      </ol>
+      <ul class="hints no-print">
+        <li class="step">1 m/s = 3.6 km/h.</li>
+        <li class="step">The loop runs as long as the car still moves.</li>
+        <li class="step">Each pass, the speed drops by <code>a_b</code> times 1 s, and never below zero.</li>
+        <li class="step">Each axis label names the quantity and its unit.</li>
+      </ul>
+      <div class="print-only workspace" style="--h: 1.2in" aria-hidden="true"></div>
+    </div>
+    <div>
+      <div class="win code" style="font-size:.54em">
+        <div class="bar"><span class="tab">brake_plot.py</span><span class="label" aria-hidden="true">VS Code</span></div>
+<pre class="py">import matplotlib.pyplot as plt
+
+def kmh_to_ms(speed_kmh):
+    return ______________
+
+v = kmh_to_ms(72)    # m/s
+a_b = 4.0            # m/s^2
+t = 0.0
+times = [t]
+speeds = [v]
+while ______________:
+    t = t + 1.0
+    v = ________________________
+    times.append(t)
+    speeds.append(v)
+
+plt.plot(times, speeds, marker="o")
+plt.xlabel(______________)
+plt.ylabel(______________)
+plt.show()</pre>
+      </div>
+    </div>
+  </div>
+  <p class="notes">Hand out the scaffold; groups fill the blanks. Click a hint only when a group is stuck. The point is not
+  the syntax: in the labs they may write code with an AI assistant, and this is what they need to read its code and check
+  it. Answers: speed_kmh / 3.6; while v > 0; v = max(v - a_b * 1.0, 0.0); "Time (s)" and "Speed (m/s)". The plot is a
+  straight line from 20 m/s at 0 s to 0 at 5 s. Other right answers exist: check that the loop stops at zero and the axes
+  have units.</p>
+</section>
+
+<!-- 20 -->
+<section class="slide" data-part="2">
+  <h2>The CARLA API: the menu</h2>
+  <div class="menu-card">
+    <p class="menu-title"><span aria-hidden="true">✦ </span>Café CARLA<span aria-hidden="true"> ✦</span></p>
+    <p class="menu-sub">Served by <code>import carla</code>: the requests CARLA accepts</p>
+    <h3>To start</h3>
+    <ul class="menu-list">
+      <li><span>connect</span><i aria-hidden="true"></i><code>client = carla.Client("localhost", 2000)</code></li>
+      <li><span>hand over the world</span><i aria-hidden="true"></i><code>world = client.get_world()</code></li>
+      <li><span>a fixed time step</span><i aria-hidden="true"></i><code>settings.fixed_delta_seconds = 0.05</code></li>
+    </ul>
+    <h3>Main course</h3>
+    <ul class="menu-list">
+      <li><span>place a car</span><i aria-hidden="true"></i><code>car = world.spawn_actor(bp, spot)</code></li>
+      <li><span>drive it</span><i aria-hidden="true"></i><code>car.apply_control(carla.VehicleControl(throttle=1.0))</code></li>
+      <li><span>move time one step</span><i aria-hidden="true"></i><code>world.tick()</code></li>
+    </ul>
+    <h3>To finish</h3>
+    <ul class="menu-list">
+      <li><span>tell me its speed</span><i aria-hidden="true"></i><code>car.get_velocity().length()</code></li>
+    </ul>
+  </div>
+  <div class="terms">
+    <div><b>world</b>everything simulated</div>
+    <div><b>actor</b>a car, a person, a sensor</div>
+    <div><b>blueprint</b>the recipe for an actor</div>
+    <div><b>tick</b>one 0.05 s time step</div>
+  </div>
+  <p class="notes">Each line is one order to the waiter: on the left what you want, on the right how you say it in Python.
+  localhost and 2000 say where CARLA listens: this computer, door 2000; the CARLA part explains. A fixed time step makes
+  time move only when the script calls tick. bp is a blueprint, the recipe for the car; spot is a place on the map. A
+  control is throttle 0 to 1, steer −1 to 1, brake 0 to 1. Spawn means place an actor in the world. The next slide puts
+  these lines in order.</p>
+</section>
+
+<!-- 21 -->
+<section class="slide" data-part="2">
+  <h2>A CARLA script, line by line</h2>
+  <div class="annot wide">
+    <div class="win code" style="font-size:.56em">
+      <div class="bar"><span class="tab">watch_it_drive.py</span><span class="label" aria-hidden="true">VS Code</span></div>
+<pre class="py">import carla
+
+client = carla.Client("localhost", 2000)
+world = client.get_world()
+settings = world.get_settings()
+settings.synchronous_mode = True
+settings.fixed_delta_seconds = 0.05
+world.apply_settings(settings)
+bp = world.get_blueprint_library().find("vehicle.lincoln.mkz_2020")
+spot = world.get_map().get_spawn_points()[0]
+car = world.spawn_actor(bp, spot)
+spectator = world.get_spectator()      # the camera of the CARLA window
+for i in range(100):
+    car.apply_control(carla.VehicleControl(throttle=1.0))
+    world.tick()
+    view = car.get_transform()         # watch from behind the car
+    view.location += view.get_forward_vector() * -8 + carla.Location(z=3)
+    view.rotation.pitch = -10
+    spectator.set_transform(view)
+print(car.get_velocity().length())</pre>
+    </div>
+    <div class="cbox step no-print" data-l="3-4"><span class="lbl">Connect, get the world</span></div>
+    <div class="cbox step no-print" data-l="5-8"><span class="lbl">Time step: 0.05 s per tick</span></div>
+    <div class="cbox step no-print" data-l="9-12"><span class="lbl">Place a car, get the camera</span></div>
+    <div class="cbox step no-print" data-l="13-15"><span class="lbl">Drive: 100 ticks = 5 s</span></div>
+    <div class="cbox step no-print" data-l="16-19"><span class="lbl">Only to watch: camera follows</span></div>
+    <div class="cbox step no-print" data-l="20"><span class="lbl">Speed, in m/s</span></div>
+  </div>
+  <p class="print-only small">Lines 3 to 4: connect, get the world. 5 to 8: a fixed time step, 0.05 s per tick. 9 to 12: place
+  a car, get CARLA's camera. 13 to 15: drive, 100 ticks = 5 s. 16 to 19: only to watch, the camera follows the car. 20: the
+  speed in m/s.</p>
+  <p class="notes">One box per click. Connect to CARLA and get its world. Fix the time step: synchronous mode means
+  time moves only when the script calls world.tick, 0.05 s each, so every run gives the same answer. Place a car: find
+  its blueprint, take the first spawn spot on the map, spawn it; the spectator is the camera of the CARLA window. Drive:
+  full throttle for 100 ticks of 0.05 s, 5 s of simulated time. The four camera lines only move CARLA's view 8 m behind
+  and 3 m above the car so you can watch; the car drives the same without them. Last, the speed: get_velocity returns a
+  vector; length gives its size, in m/s. Dots read left to right: world.get_map().get_spawn_points()[0] is the world's
+  map, its list of starting spots, the first one.</p>
+</section>
+
+<!-- 22 -->
+<section class="slide no-print" data-part="3">
+  <h2>Part 3: CARLA</h2>
+  <div class="map-slot" data-map="f-carla" data-label="The map with CARLA outlined in a rainbow. Everything else is grayed out."></div>
+  <p class="notes">Now the other side of the API: the simulator itself.</p>
+</section>
+
+<!-- 23 -->
+<section class="slide" data-part="3">
+  <h2>CARLA: a server and your script</h2>
+  <button class="btn watch no-print" type="button" data-video="vid-carla"><span aria-hidden="true">&#9654; </span>Watch it <small>(13 s video)</small></button>
+  <p class="lead">CARLA runs the world. Your script asks it to do things.</p>
+  <div class="pc">
+    <p class="pc-lbl">Linux: both run on one computer</p>
+    <div class="cs">
+      <div class="card cl">
+        <h3>Your Python script (client)</h3>
+        <p>uses the Python API to place a car, drive it and read results</p>
+        <div class="win code" style="text-align:left; font-size:.58em; margin-top:.5em">
+<pre class="py">import carla
+client = carla.Client("localhost", 2000)</pre></div>
+      </div>
+      <div class="wire" id="wire" aria-hidden="true">
+        <div class="lbl t1">commands →</div><div class="line l1"></div>
+        <div class="lbl t2">← data</div><div class="line l2"></div>
+        <div class="lbl t3">localhost<br>port 2000</div>
+      </div>
+      <div class="card">
+        <h3>CARLA server</h3>
+        <p>roads, weather, cars, physics. Start it first: <code>carla</code></p>
+        <img src="figures/carla-wet-road.png" alt="">
+      </div>
+    </div>
+  </div>
+  <div class="controls no-print"><button class="btn" id="wire-play" type="button">Send messages</button></div>
+  <p class="sr-only">Your script sends commands to the CARLA server, such as apply_control and tick, and reads data back,
+  such as the car's speed, over port 2000 on the same computer.</p>
+  <p class="notes">A server is a program that waits for requests; a client is a program that sends them. Start the server
+  once with the carla command in its own terminal and leave it running. localhost means this same computer; port 2000 is
+  the door CARLA listens on. With a fixed tick, the simulation only moves when your script says so, so every run gives the same answer.</p>
+</section>
+
+<!-- 24 -->
+<section class="slide no-print" data-part="4">
+  <h2>Part 4: All together</h2>
+  <div class="map-slot" data-map="f-all" data-label="The whole map outlined in a rainbow: you, Linux, the terminal and VS Code, Python with its API, and CARLA."></div>
+  <p class="notes">Every box at once: start CARLA, write a script, run it, watch the car.</p>
+</section>
+
+<!-- 25 -->
+<section class="slide" data-part="4">
+  <h2>Putting it all together</h2>
+  <button class="btn watch no-print" type="button" data-video="vid-drive"><span aria-hidden="true">&#9654; </span>Watch it <small>(26 s video)</small></button>
+  <div class="together">
+    <figure class="tg-shot"><img src="screens/run-done.jpg" alt="The real run on the course drive. CARLA's window on the left half of the screen shows the black car on a city street. A terminal on the right half ran python3 watch_it_drive.py and printed the car's speed, 21.80 meters per second."></figure>
+    <ol class="recipe">
+      <li><span class="tag-t">Terminal 1</span> <code>carla</code><small>start the world, leave it running</small></li>
+      <li><span class="tag-c">VS Code</span> write <code>watch_it_drive.py</code>, <code>Ctrl+S</code><small>connect, spawn, drive, read</small></li>
+      <li><span class="tag-t">Terminal 2</span> <code>cd lab1</code>, then <code>python3 watch_it_drive.py</code><small>a second terminal: <code>Ctrl+Alt+T</code></small></li>
+      <li><span class="tag-carla">CARLA</span> watch the car<small>Python prints the speed in m/s</small></li>
+    </ol>
+  </div>
+  <p class="notes">Every part of the map in one run. Start with the video: CARLA on the left half, a second terminal on the
+  right, the script drives the car and prints its speed. The script is watch_it_drive.py, the one read line by line.
+  Full throttle for 100 ticks of 0.05 s, 5 s of simulated time, reaches 21.8 m/s.</p>
+</section>
+
+<!-- 26 -->
+<section class="slide bughunt" data-part="4">
+  <div class="bugfield no-print" id="bugfield" aria-hidden="true"></div>
+  <h2>Bug hunt</h2>
+  <button class="btn secondary bugstop no-print" id="bugstop" type="button" aria-pressed="false">Stop the bugs</button>
+  <p class="lead">Real errors from the USB drive. Which window? What is the fix?</p>
+  <div class="errs hunt">
+    <figure><img src="screens/error-python-in-terminal.png" alt="A terminal. v = 20.0 gives v: command not found. print of stops in, 4.0 gives bash: syntax error near unexpected token.">
+      <figcaption><b>A.</b> <span class="ans step">Python typed into the terminal. Put it in a .py file.</span><span class="blank">____________________________</span></figcaption></figure>
+    <figure class="step"><img src="screens/error-misspelled.png" alt="VS Code's terminal panel. pyhton3 brake.py gives: Command pyhton3 not found, did you mean: command python3.">
+      <figcaption><b>B.</b> <span class="ans step">A typo in the command. Linux suggests python3.</span><span class="blank">____________________________</span></figcaption></figure>
+    <figure class="step"><img src="screens/error-command-in-file.png" alt="VS Code. brake.py has a fifth line, python3 brake.py, with a red squiggle. Running it prints File brake.py, line 5, SyntaxError: invalid syntax.">
+      <figcaption><b>C.</b> <span class="ans step">A terminal command in the Python file (line 5). Delete it.</span><span class="blank">____________________________</span></figcaption></figure>
+    <figure class="step"><img src="screens/error-carla-not-running.png" alt="VS Code. drive.py connects to CARLA. Running it prints a Traceback ending in RuntimeError: time-out of 5000ms while waiting for the simulator, make sure the simulator is ready and connected to localhost:2000.">
+      <figcaption><b>D.</b> <span class="ans step">The code is fine; CARLA is not running. Start it: <code>carla</code></span><span class="blank">____________________________</span></figcaption></figure>
+  </div>
+  <p class="notes">One bug at a time: show it, take answers, click for the fix, click for the next bug. Read the last line
+  of an error first: it says what went wrong; the line above it says where. Error C: VS Code had already drawn a red
+  squiggle under line 5 before it ran. Error D: start CARLA in another terminal, wait for its window, then run the script
+  again. The bugs crawl until you press Stop the bugs; each answer swats a couple of them, and D gets the rest.</p>
+</section>
+
+<!-- 27 -->
+<section class="slide worked-example" data-part="4">
+  <span class="example-label">Worked example 2</span>
+  <h2>What will the car do?</h2>
+  <div class="run">
+    <div>
+      <div class="win code" style="font-size:.54em">
+        <div class="bar"><span class="tab">what_will_it_do.py</span><span class="label" aria-hidden="true">VS Code</span></div>
+<pre class="py"># connected, tick 0.05 s, car spawned
+for i in range(50):
+    car.apply_control(carla.VehicleControl(throttle=1.0))
+    world.tick()
+
+start = car.get_location()        # meters
+while car.get_velocity().length() > 0.1:
+    car.apply_control(carla.VehicleControl(brake=1.0))
+    world.tick()
+
+print(car.get_location().distance(start))</pre>
+      </div>
+      <p class="key small">CARLA works in SI units: meters, seconds, meters per second.</p>
+    </div>
+    <div>
+      <ol class="qs" style="font-size:.82em">
+        <li>How long is the throttle on?</li>
+        <li>What does the second loop do? When does it end?</li>
+        <li>What is printed, in what units?</li>
+        <li>It reaches 12.4 m/s, then brakes at a constant 7 m/s². Predict the number: \(d = v_0^2 / (2 a_b)\).</li>
+      </ol>
+      <div class="win code step no-print we2-out" style="font-size:.5em"><div class="panel"><div class="ptab"><span>TERMINAL</span></div>
+<pre class="sh" data-cwd="~/lab1">$ python3 what_will_it_do.py
+10.77253246307373</pre></div></div>
+    </div>
+  </div>
+  <div class="workspace" style="--h: 2.2in" aria-hidden="true"></div>
+  <p class="notes">The stopping distance at constant deceleration comes from v² = v0² − 2 a_b d with v = 0. Work
+  questions 1 to 4 at the board, then click for what CARLA printed. This is a real CARLA 0.9.16 run of exactly this code:
+  50 ticks of 0.05 s is 2.5 s of throttle; the car reaches 12.4 m/s; the prediction is 12.4² / 14 = 11.0 m; CARLA prints
+  10.77 m, 2% shorter. CARLA's stop is close to, but not exactly, constant deceleration: on average 12.4² / (2 × 10.77) =
+  7.1 m/s².</p>
+</section>
+
+<!-- 28 -->
+<section class="slide">
+  <h2>What you can do now</h2>
+  <svg class="map" id="map-recap" viewBox="0 0 1140 520" role="img" aria-labelledby="recap-title recap-desc">
+    <title id="recap-title">What you can do now, part by part</title>
+    <desc id="recap-desc">The same drawing as at the start, with one sentence in each box. Linux: boot the USB drive;
+    your work lives in your home folder. Terminal and VS Code: commands go in the terminal, Python goes in a saved .py file.
+    Python: count from 0, indent the body. The Python API inside Python: connect, spawn, control, tick, read. CARLA: a
+    server, start it first. Below: run it with CARLA in one terminal and your script in a second.</desc>
+    <defs><marker id="rc-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#532E1F"/></marker>
+      <clipPath id="rc-clip"><rect x="887" y="224" width="221" height="94" rx="6"/></clipPath></defs>
+    <rect x="2" y="150" width="120" height="180" rx="12" fill="#fff" stroke="#532E1F" stroke-width="2.5" stroke-dasharray="7 5"/>
+    <text x="62" y="186" text-anchor="middle" font-size="27" font-weight="700" fill="#532E1F">You</text>
+    <rect x="14" y="198" width="96" height="64" rx="5" fill="#1F1A17"/>
+    <image href="screens/desktop.png" x="18" y="202" width="88" height="55" preserveAspectRatio="xMidYMid slice"/>
+    <path d="M55,262 h14 l4,9 h-22 z" fill="#5E5650"/><rect x="44" y="270" width="36" height="4" rx="2" fill="#5E5650"/>
+    <rect x="14" y="282" width="96" height="30" rx="4" fill="#EEEAE7" stroke="#5E5650" stroke-width="1.5"/>
+    <path d="M19,289.5 H106 M23,297.5 H102" stroke="#8A817B" stroke-width="5" stroke-dasharray="8 2.8"/>
+    <path d="M38,305.5 H86" stroke="#8A817B" stroke-width="5"/>
+    <rect x="150" y="2" width="988" height="516" rx="16" fill="#F8F3EF" stroke="#532E1F" stroke-width="3"/>
+    <path d="M150,78 V18 a16,16 0 0 1 16,-16 H1122 a16,16 0 0 1 16,16 V78 z" fill="#532E1F"/>
+    <circle cx="184" cy="40" r="17" fill="#F1C500"/><text x="184" y="47" text-anchor="middle" font-size="21" font-weight="700" fill="#532E1F">1</text>
+    <text x="212" y="38" font-size="27" font-weight="700" fill="#fff">Linux</text>
+    <text x="212" y="67" font-size="22" fill="#fff">Boot the USB drive. Your work lives in your home folder.</text>
+    <path d="M124,240 H171" stroke="#532E1F" stroke-width="3" marker-end="url(#rc-ah)"/>
+    <rect x="175" y="150" width="190" height="180" rx="12" fill="#fff" stroke="#300A24" stroke-width="3"/>
+    <circle cx="177" cy="152" r="15" fill="#300A24"/><text x="177" y="158" text-anchor="middle" font-size="18" font-weight="700" fill="#fff">2</text>
+    <text x="270" y="194" text-anchor="middle" font-size="25" font-weight="700" fill="#300A24">Terminal</text>
+    <text x="270" y="221" text-anchor="middle" font-size="25" font-weight="700" fill="#300A24">and VS Code</text>
+    <text x="270" y="252" text-anchor="middle" class="tk">Commands go in</text><text x="270" y="275" text-anchor="middle" class="tk">the terminal.</text>
+    <text x="270" y="298" text-anchor="middle" class="tk">Python goes in</text><text x="270" y="321" text-anchor="middle" class="tk">a saved .py file.</text>
+    <path d="M367,240 H391" stroke="#532E1F" stroke-width="3" marker-end="url(#rc-ah)"/>
+    <rect x="395" y="150" width="445" height="180" rx="12" fill="#fff" stroke="#2B5B84" stroke-width="3"/>
+    <circle cx="397" cy="152" r="15" fill="#2B5B84"/><text x="397" y="158" text-anchor="middle" font-size="18" font-weight="700" fill="#fff">3</text>
+    <text x="470" y="204" text-anchor="middle" font-size="27" font-weight="700" fill="#2B5B84">Python</text>
+    <text x="470" y="246" text-anchor="middle" class="tk">Count from 0.</text><text x="470" y="270" text-anchor="middle" class="tk">Indent the</text><text x="470" y="294" text-anchor="middle" class="tk">body.</text>
+    <rect x="585" y="166" width="240" height="148" rx="10" fill="#FFF8E1" stroke="#8A5A00" stroke-width="3"/>
+    <circle cx="587" cy="168" r="14" fill="#8A5A00"/><text x="587" y="174" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">5</text>
+    <text x="705" y="212" text-anchor="middle" font-size="26" font-weight="700" fill="#8A5A00">Python API</text>
+    <text x="705" y="252" text-anchor="middle" class="tk">Connect, spawn,</text><text x="705" y="276" text-anchor="middle" class="tk">control, tick, read.</text>
+    <path d="M829,240 H871" stroke="#532E1F" stroke-width="3" marker-start="url(#rc-ah)" marker-end="url(#rc-ah)"/>
+    <rect x="875" y="150" width="245" height="180" rx="12" fill="#fff" stroke="#1E6B52" stroke-width="3"/>
+    <circle cx="877" cy="152" r="15" fill="#1E6B52"/><text x="877" y="158" text-anchor="middle" font-size="18" font-weight="700" fill="#fff">4</text>
+    <text x="997" y="186" text-anchor="middle" font-size="27" font-weight="700" fill="#1E6B52">CARLA</text>
+    <text x="997" y="213" text-anchor="middle" class="tk">A server. Start it first.</text>
+    <image href="figures/carla-we2-chase.jpg" x="887" y="224" width="221" height="94" preserveAspectRatio="xMidYMid slice" clip-path="url(#rc-clip)"/>
+    <rect x="175" y="412" width="953" height="94" rx="10" fill="#FCEFB4"/><rect x="175" y="412" width="10" height="94" fill="#8A5A00"/>
+    <text x="204" y="451" font-size="23" font-weight="700" fill="#6B4500">Run it: CARLA first, then your script.</text>
+    <text x="204" y="488" font-size="23" fill="#1F1A17">Terminal 1: <tspan class="mono" font-size="21">carla</tspan>. Terminal 2: <tspan class="mono" font-size="21">python3 watch_it_drive.py</tspan>. Watch the car, read the numbers.</text>
+  </svg>
+  <p class="notes">Tell them what you told them. Each box is one sentence they should be able to say back.</p>
+</section>
+
+<!-- 29 -->
+<section class="slide">
+  <h2>Where we are going: ROS 2</h2>
+  <div class="aeb">
+    <div>
+      <svg id="aeb-svg" viewBox="0 0 760 470" role="img" aria-labelledby="aeb-title aeb-desc">
+        <title id="aeb-title">Automatic emergency braking with ROS 2 and CARLA</title>
+        <desc id="aeb-desc">Inside Linux, a ROS 2 box holds three programs, called nodes. CARLA publishes the car's radar
+        readings on the topic /carla/hero/radar. The node aeb, written in Python, subscribes to it and publishes driving
+        commands on /carla/hero/vehicle_control_cmd, which CARLA subscribes to. A logger node also subscribes to the radar
+        topic. Below, in CARLA's world, the car drives at 15 m/s toward a stopped car 45 m ahead.</desc>
+        <defs><marker id="aeb-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#22314E"/></marker></defs>
+        <rect x="2" y="2" width="756" height="466" rx="14" fill="#F8F3EF" stroke="#532E1F" stroke-width="2.5"/>
+        <text x="20" y="28" font-size="18" font-weight="700" fill="#532E1F">Linux</text>
+        <rect x="16" y="40" width="728" height="262" rx="12" fill="#E8ECF4" stroke="#22314E" stroke-width="3"/>
+        <text x="32" y="68" font-size="22" font-weight="700" fill="#22314E">ROS 2</text>
+        <text x="108" y="68" font-size="17" fill="#3D4A63">nodes share data over topics</text>
+        <g fill="none" stroke="#22314E" stroke-width="3">
+          <path id="aeb-p-radar" d="M234,120 H494" marker-end="url(#aeb-ah)"/>
+          <path id="aeb-p-cmd" d="M498,166 H238" marker-end="url(#aeb-ah)"/>
+          <path id="aeb-p-log" d="M234,212 C330,212 400,252 494,252" marker-end="url(#aeb-ah)"/>
+        </g>
+        <rect x="32" y="86" width="200" height="150" rx="12" fill="#fff" stroke="#1E6B52" stroke-width="3"/>
+        <text x="132" y="116" text-anchor="middle" font-size="24" font-weight="700" fill="#1E6B52">CARLA</text>
+        <image href="figures/car-mkz.png" x="52" y="128" width="160" height="50"/>
+        <text x="132" y="204" text-anchor="middle" font-size="16" fill="#5E5650">publishes the radar,</text>
+        <text x="132" y="224" text-anchor="middle" font-size="16" fill="#5E5650">takes commands</text>
+        <rect id="aeb-node" x="500" y="86" width="228" height="112" rx="12" fill="#fff" stroke="#2B5B84" stroke-width="3"/>
+        <image href="figures/icon-python.png" x="512" y="94" width="42" height="42"/>
+        <text x="562" y="122" font-size="26" font-weight="700" fill="#2B5B84">aeb</text>
+        <text x="562" y="141" font-size="15" fill="#5E5650">you write it</text>
+        <text x="512" y="164" font-size="15" font-weight="700" fill="#2B5B84">automatic emergency braking</text>
+        <text x="614" y="189" text-anchor="middle" font-size="17" font-weight="700" fill="#2E7D32" id="aeb-state">decides: drive</text>
+        <rect x="500" y="222" width="228" height="60" rx="12" fill="#fff" stroke="#22314E" stroke-width="3"/>
+        <text x="614" y="259" text-anchor="middle" font-size="22" font-weight="700" fill="#22314E">logger</text>
+        <g font-family="DejaVu Sans Mono, monospace" fill="#1F1A17">
+          <rect x="262" y="95" width="206" height="22" rx="11" fill="#FCEFB4"/><text x="365" y="111" text-anchor="middle" font-size="15">/carla/hero/radar</text>
+          <rect x="240" y="173" width="252" height="22" rx="11" fill="#FCEFB4"/><text x="366" y="189" text-anchor="middle" font-size="13">/carla/hero/vehicle_control_cmd</text>
+          <rect x="262" y="221" width="206" height="22" rx="11" fill="#FCEFB4"/><text x="365" y="237" text-anchor="middle" font-size="15">/carla/hero/radar</text>
+        </g>
+        <g id="aeb-dots"></g>
+        <rect x="16" y="382" width="728" height="54" fill="#5E5650"/>
+        <line x1="16" y1="409" x2="744" y2="409" stroke="#F1C500" stroke-width="3" stroke-dasharray="18 14"/>
+        <polygon id="aeb-beam" points="150,401 620,389 620,413" fill="#F1C500" fill-opacity=".35"/>
+        <path id="aeb-gapline" d="M150,360 V370 H620 V360" fill="none" stroke="#1F1A17" stroke-width="2"/>
+        <text id="aeb-gaptxt" x="385" y="354" text-anchor="middle" font-size="18" font-weight="700" fill="#1F1A17">gap 45.0 m</text>
+        <image href="figures/car-mustang.png" x="620" y="389" width="120" height="33"/>
+        <image id="aeb-ego" href="figures/car-mkz.png" x="30" y="384" width="120" height="38"/>
+      </svg>
+      <div class="controls no-print"><button class="btn" id="aeb-play" type="button">Play</button>
+        <span class="readout">speed <b id="aeb-v">15.0</b> m/s</span>
+        <span class="legend" aria-hidden="true"><i style="background:#1F6FB2"></i>radar <i style="background:#2E7D32"></i>drive <i style="background:#B3261E"></i>brake</span></div>
+      <p class="sr-only" id="aeb-said" aria-live="polite"></p>
+    </div>
+    <div>
+      <p class="lead">Why ROS 2</p>
+      <ul class="pts">
+        <li>Programs share data on named topics<small>publish and subscribe</small></li>
+        <li>Add a program, change nothing else<small>the logger only listens</small></li>
+        <li>Same code in the simulator and the real car<small>only where the topics come from changes</small></li>
+        <li>Thousands of ready-made packages<small>sensor drivers, maps, plots</small></li>
+        <li>Record a drive, replay it to test<small>ros2 bag</small></li>
+      </ul>
+    </div>
+  </div>
+  <p class="notes">One look ahead, then we stop. AEB is automatic emergency braking. In ROS 2 every program is a node, and
+  nodes share data over named topics: CARLA publishes the radar, the aeb node you will write subscribes to it and
+  publishes brake commands, and CARLA subscribes to those. Click Play: blue dots are radar readings, green dots drive
+  commands, red dots brake commands. aeb brakes when the gap divided by the speed, the time to collision, drops below
+  1.4 s, and the car stops about 5 m short. This is a drawing with round numbers, not a CARLA run. The logger was added
+  without touching aeb: a publisher does not know who listens. ROS 2 stands for Robot Operating System 2; ours is the
+  Humble release. Topic names follow CARLA 0.9.16's own ROS 2 names for a car called hero. One setup step still uses the
+  API to place the car and its sensors.</p>
+</section>
+
+<!-- 30 -->
+<section class="slide no-print">
+  <h2>Credits</h2>
+  <ul class="credits">
+    <li>Screens and videos: the course USB drive (Ubuntu 22.04, VS Code, CARLA 0.9.16, ROS 2 Humble), captured by the course in a virtual machine.</li>
+    <li>Restaurant photos, Wikimedia Commons: diners ordering, PattayaPatrol, CC BY-SA 4.0; a waiter with four plates, US Army Africa, CC BY 2.0; cooks at work, Matthias Ripp, CC BY 2.0.</li>
+    <li>Terminal icon: Ubuntu's Yaru icon theme, CC BY-SA 4.0. The VS Code icon and the Python logo are trademarks of Microsoft and of the Python Software Foundation, shown to name the software, and are not covered by this lecture's license.</li>
+    <li>CARLA images and the worked-example run: rendered and logged by the course in CARLA 0.9.16; CARLA assets are CC BY 4.0.</li>
+    <li>Plots made with Matplotlib by the code on their slides (figures/make_figures_1b.py).</li>
+    <li>The WMU logo is a registered trademark of Western Michigan University and is not covered by this lecture's license.</li>
+    <li>Python, Linux and terminal examples adapted from the Spring 2026 offering.</li>
+    <li>© 2027 Zachary D. Asher. The rest of this lecture is licensed CC BY 4.0: reuse it with credit. Its code is Apache-2.0.</li>
+  </ul>
+</section>
+
+</main>
+
+<!-- Videos: screen recordings of the course USB drive (booted in a virtual machine with a GPU), screen only.
+     Files: videos/*.mp4 (not committed; VIDEO_BASES in the script below: the local folder, then the public release). -->
+<dialog class="vid no-print" id="vid-terminal" aria-labelledby="vid-terminal-h">
+  <div class="vid-head"><h2 id="vid-terminal-h">Open a terminal</h2><p>The course USB drive</p><button class="btn secondary vid-close" type="button">Close</button></div>
+  <div class="vid-body">
+    <video controls muted playsinline preload="none" data-file="c1-terminal.mp4" aria-describedby="vid-terminal-steps"></video>
+    <ol id="vid-terminal-steps">
+      <li>Click the Terminal icon in the dock, the strip of icons on the left edge.</li>
+      <li>The terminal opens in your home folder: <code>student@me4650:~$</code></li>
+      <li>Type <code>pwd</code>, press <kbd>Enter</kbd>: it prints <code>/home/student</code>.</li>
+      <li>Type <code>ls</code>, press <kbd>Enter</kbd>: it lists the folders in your home folder.</li>
+    </ol>
+  </div>
+</dialog>
+<dialog class="vid no-print" id="vid-vscode" aria-labelledby="vid-vscode-h">
+  <div class="vid-head"><h2 id="vid-vscode-h">Hello, world: write, save and run a Python file</h2><p>The course USB drive</p><button class="btn secondary vid-close" type="button">Close</button></div>
+  <div class="vid-body">
+    <video controls muted playsinline preload="none" data-file="c3-hello.mp4" aria-describedby="vid-vscode-steps"></video>
+    <ol id="vid-vscode-steps">
+      <li>In the terminal, type each command and press <kbd>Enter</kbd>: <code>mkdir hello</code>, <code>cd hello</code>, <code>code .</code></li>
+      <li>VS Code opens the empty folder HELLO.</li>
+      <li>In the Explorer on the left, click the New File icon (a page with a plus) and name it <code>hello.py</code>.</li>
+      <li>Type <code>print("Hello, world!")</code>. The dot on the tab means not saved.</li>
+      <li><kbd>Ctrl+S</kbd> saves.</li>
+      <li><kbd>Ctrl+`</kbd> (backtick, the key under <kbd>Esc</kbd>) opens a TERMINAL panel at the bottom of VS Code. Run <code>python3 hello.py</code> there: it prints <code>Hello, world!</code></li>
+    </ol>
+  </div>
+</dialog>
+<dialog class="vid no-print" id="vid-carla" aria-labelledby="vid-carla-h">
+  <div class="vid-head"><h2 id="vid-carla-h">Start CARLA</h2><p>The course USB drive</p><button class="btn secondary vid-close" type="button">Close</button></div>
+  <div class="vid-body">
+    <video controls muted playsinline preload="none" data-file="c2-carla.mp4" aria-describedby="vid-carla-steps"></video>
+    <ol id="vid-carla-steps">
+      <li>In a terminal, type <code>carla</code> and press <kbd>Enter</kbd>.</li>
+      <li>CARLA's window opens, black at first. Wait 10 to 30 s while the city loads. The video plays this wait 4 times faster.</li>
+      <li>The city appears. Leave the window open, and do not type in that terminal again: use a second terminal for your scripts.</li>
+    </ol>
+  </div>
+</dialog>
+<dialog class="vid no-print" id="vid-drive" aria-labelledby="vid-drive-h">
+  <div class="vid-head"><h2 id="vid-drive-h">Run a CARLA script</h2><p>The course USB drive</p><button class="btn secondary vid-close" type="button">Close</button></div>
+  <div class="vid-body">
+    <video controls muted playsinline preload="none" data-file="c4-drive.mp4" aria-describedby="vid-drive-steps"></video>
+    <ol id="vid-drive-steps">
+      <li>CARLA is running. Hold the Windows key (Linux calls it Super) and press <kbd>&larr;</kbd>: CARLA's window snaps to the left half.</li>
+      <li><kbd>Ctrl+Alt+T</kbd> opens a second terminal. Windows key and <kbd>&rarr;</kbd> puts it on the right half.</li>
+      <li><code>cd lab1</code>, then <code>python3 watch_it_drive.py</code>. It is the script read line by line in the lecture.</li>
+      <li>The car drives at full throttle for 100 ticks of 0.05 s: 5 s of simulated time. The video plays this part 4 times faster.</li>
+      <li>Python prints the speed: <code>21.80...</code> m/s.</li>
+    </ol>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---------- the minimap: which of today's four parts this slide is in ----------
+  const PARTS = ["Linux", "Python and its API", "CARLA", "All together"];
+  document.querySelectorAll("section.slide[data-part]").forEach(s => {
+    const ol = document.createElement("ol");
+    ol.className = "minimap"; ol.setAttribute("aria-hidden", "true");
+    ol.innerHTML = PARTS.map((p, i) => +s.dataset.part === i + 1
+      ? `<li class="on" style="background:var(--c${i + 1});border-color:var(--c${i + 1})">${i + 1} ${p}</li>` : `<li>${i + 1} ${p}</li>`).join("");
+    s.prepend(ol);
+  });
+
+  // ---------- the map: copies of slide 2's drawing on later slides (.map-slot) ----------
+  (function () {
+    const NS = "http://www.w3.org/2000/svg", src = $("map-agenda");
+    const RB = ["#E63946", "#F4A261", "#F1C500", "#2A9D8F", "#457B9D", "#8E44AD"];
+    const hex = (c, i) => parseInt(c.substr(1 + 2 * i, 2), 16);
+    const mix = (a, b, u) => "#" + [0, 1, 2].map(i => Math.round(hex(a, i) * (1 - u) + hex(b, i) * u).toString(16).padStart(2, "0")).join("");
+    // the part to outline (x, y, width, height, corner) and the groups to gray out
+    const FOCUS = {
+      "f-linux": [[150, 2, 988, 516, 16], ".you, .g-term, .g-py, .g-carla, .k-api"],
+      "f-python": [[395, 150, 445, 180, 12], ".you, .g-linux, .g-term, .g-carla"],
+      "f-carla": [[875, 150, 245, 180, 12], ".you, .g-linux, .g-term, .g-py, .k-api"],
+      "f-all": [[150, 2, 988, 516, 16], ""],
+    };
+    // a rainbow border: N short dashes of blended colors around the box; CSS slides them once around (rb-turn)
+    function rainbow(svg, [x, y, w, h, r]) {
+      const N = 60, L = 2 * (w + h) - 8 * r + 2 * Math.PI * r, d = L / N;
+      const g = document.createElementNS(NS, "g");
+      g.setAttribute("class", "rb"); g.setAttribute("aria-hidden", "true"); g.style.setProperty("--p", L.toFixed(1));
+      [["rb-glow", 16], ["rb-line", 7]].forEach(([cls, sw]) => {
+        const lg = document.createElementNS(NS, "g"); lg.setAttribute("class", cls);
+        for (let i = 0; i < N; i++) {
+          const u = i / N * RB.length, k = Math.floor(u), dash = i < N - 1 ? d + .8 : d;
+          const rc = document.createElementNS(NS, "rect");
+          Object.entries({ x, y, width: w, height: h, rx: r, fill: "none", stroke: mix(RB[k], RB[(k + 1) % RB.length], u - k),
+            "stroke-width": sw, "stroke-dasharray": `0 ${(i * d).toFixed(2)} ${dash.toFixed(2)} ${Math.max(0, L - i * d - dash).toFixed(2)}` })
+            .forEach(([a, v]) => rc.setAttribute(a, v));
+          lg.append(rc);
+        }
+        g.append(lg);
+      });
+      svg.append(g);
+    }
+    document.querySelectorAll(".map-slot").forEach((slot, n) => {
+      const svg = src.cloneNode(true), mode = slot.dataset.map, sfx = "-c" + n;
+      svg.removeAttribute("id"); svg.classList.remove("build"); svg.classList.add("static", mode);
+      svg.querySelector("title").remove(); svg.querySelector("desc").remove();
+      svg.removeAttribute("aria-labelledby"); svg.setAttribute("aria-label", slot.dataset.label);
+      svg.querySelectorAll("[id]").forEach(el => { el.id += sfx; });
+      svg.querySelectorAll("[marker-start], [marker-end], [clip-path]").forEach(el => ["marker-start", "marker-end", "clip-path"].forEach(a => {
+        const v = el.getAttribute(a); if (v) el.setAttribute(a, v.replace(/#([\w-]+)/, `#$1${sfx}`));
+      }));
+      svg.querySelectorAll(".step").forEach(el => el.classList.remove("step"));
+      if (mode === "ros") svg.querySelector(".k-ros").classList.add("step");
+      const f = FOCUS[mode];
+      if (f) { if (f[1]) svg.querySelectorAll(f[1]).forEach(el => el.classList.add("dim")); rainbow(svg, f[0]); }
+      slot.replaceWith(svg);
+    });
+  })();
+
+  // ---------- Python colors, as VS Code's Dark Modern theme draws them ----------
+  const CTRL = new Set("import from as for while if elif else return in and or not break continue pass with try except".split(" "));
+  const DEFS = new Set("def class True False None lambda".split(" "));
+  const MODS = new Set("np numpy plt matplotlib pyplot carla".split(" "));
+  function pyLine(line) {
+    const re = /(#.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\b\d+(?:\.\d+)?\b)|([A-Za-z_]\w*)|(\s+|.)/g;
+    let out = "", m;
+    while ((m = re.exec(line))) {
+      const [t, c, s, n, w] = m;
+      if (c) out += `<span class="tk-cm">${esc(t)}</span>`;
+      else if (s) out += `<span class="tk-st">${esc(t)}</span>`;
+      else if (n) out += `<span class="tk-nu">${t}</span>`;
+      else if (w) {
+        const call = /^\s*\(/.test(line.slice(re.lastIndex));
+        const cls = CTRL.has(w) ? "kw" : DEFS.has(w) ? "df" : MODS.has(w) ? "md" : call ? "fn" : "va";
+        out += `<span class="tk-${cls}">${w}</span>`;
+      } else out += esc(t);
+    }
+    return out;
+  }
+  const num = n => `<span class="ln" aria-hidden="true">${n}</span>`;
+  document.querySelectorAll("pre.py").forEach(pre => {
+    if (pre.hasAttribute("data-lines")) {
+      Array.from(pre.children).forEach((sp, i) => { sp.innerHTML = num(i + 1) + pyLine(sp.textContent); });
+    } else {
+      pre.innerHTML = pre.textContent.split("\n").map((l, i) => num(i + 1) + pyLine(l)).join("\n");
+    }
+  });
+  // shell: "$ cmd" lines get the real prompt
+  const prompt = cwd => `<span class="p">student@me4650</span>:<span class="d">${cwd}</span>$ `;
+  function shell(pre) {
+    const cwd = pre.dataset.cwd || "~";
+    pre.innerHTML = pre.textContent.split("\n").map(l => l.startsWith("$ ") ? prompt(cwd) + esc(l.slice(2)) : esc(l)).join("\n");
+  }
+  document.querySelectorAll("pre.sh").forEach(shell);
+
+  // ---------- labels and boxes on code (.annot): put each at its lines, data-l="3" or "3-4" ----------
+  (function () {
+    function place() {
+      document.querySelectorAll(".annot").forEach(a => {
+        const pre = a.querySelector("pre.py"); if (!pre) return;
+        const cs = getComputedStyle(pre), lh = parseFloat(cs.lineHeight), pt = parseFloat(cs.paddingTop);
+        let y = 0, el = pre;
+        while (el && el !== a) { y += el.offsetTop; el = el.offsetParent; }
+        a.querySelectorAll("[data-l]").forEach(c => {
+          const [l0, l1] = c.dataset.l.split("-").map(Number), n = (l1 || l0) - l0 + 1;
+          c.style.top = (y + pt + (l0 - 1) * lh) + "px"; c.style.height = n * lh + "px";
+        });
+      });
+    }
+    place();
+    if (document.fonts) document.fonts.ready.then(place);
+    window.addEventListener("load", place);
+    new MutationObserver(place).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+  })();
+
+  // ---------- worked example 1: step through the program one line at a time ----------
+  (function () {
+    const lines = Array.from($("we1-code").children);
+    const fmt = x => Number.isInteger(x) ? x.toFixed(1) : String(x);
+    let s;
+    const trace = [];
+    (function run() {
+      let v, a_b, dt, t, o = [];
+      const snap = (line) => trace.push({ line, t, v, a_b, dt, out: o.slice() });
+      snap(0); v = 20.0; snap(1); a_b = 6.0; snap(2); dt = 1.0; snap(3); t = 0.0;
+      while (true) {
+        snap(4); if (!(v > 0)) break;
+        snap(5); t = t + dt;
+        snap(6); v = Math.max(v - a_b * dt, 0.0);
+        snap(7); o.push(`${fmt(t)} ${fmt(v)}`);
+      }
+      snap(8); o.push(`stopped after ${fmt(t)} s`);
+      trace.push({ line: -1, t, v, a_b, dt, out: o.slice() });
+    })();
+    const boxes = { t: "we1-bt", v: "we1-bv", a_b: "we1-ba", dt: "we1-bd" };
+    function show() {
+      const k = trace[s], prev = trace[s - 1];
+      lines.forEach((l, i) => l.classList.toggle("hl", i === k.line));
+      const f = x => x === undefined ? "·" : fmt(x);
+      $("we1-t").textContent = f(k.t); $("we1-v").textContent = f(k.v);
+      $("we1-a").textContent = f(k.a_b); $("we1-dt").textContent = f(k.dt);
+      Object.entries(boxes).forEach(([key, id]) => $(id).classList.toggle("flash", !!prev && prev[key] !== k[key]));
+      $("we1-out").textContent = k.out.length ? k.out.join("\n") : " ";
+      $("we1-step").disabled = s === trace.length - 1;
+    }
+    function say() {
+      const k = trace[s], f = x => x === undefined ? "not set" : fmt(x);
+      const next = k.line >= 0 ? `Next line ${k.line + 1}: ${lines[k.line].textContent.replace(/^\d+/, "").split("#")[0].trim()}.` : "Program finished.";
+      $("we1-said").textContent = `${next} t is ${f(k.t)}, v is ${f(k.v)}.` + (k.out.length ? ` Printed so far: ${k.out.join("; ")}.` : "");
+    }
+    $("we1-step").addEventListener("click", () => { if (s < trace.length - 1) { s++; show(); say(); } });
+    $("we1-reset").addEventListener("click", () => { s = 0; show(); say(); });
+    s = 0; show();
+  })();
+
+  // ---------- the terminal: a small simulated shell with the USB drive's home folder ----------
+  (function () {
+    const demo = ["pwd", "ls", "mkdir lab1", "cd lab1", "pwd", "touch hello.py", "ls",
+      "echo 'print(\"Hello WMU\")' > hello.py", "cat hello.py", "python3 hello.py", "cd ..", "pwd"];
+    let fs, cwd, next;
+    const dir = () => ({ type: "dir", kids: {} });
+    function reset() {
+      fs = dir();
+      ["carla_examples", "Desktop", "Documents", "Downloads", "Music", "Pictures", "Public", "ros2_ws", "Templates", "Videos"]
+        .forEach(n => { fs.kids[n] = dir(); });
+      cwd = []; next = 0; $("term-log").textContent = ""; draw();
+    }
+    const node = path => path.reduce((n, p) => n && n.kids[p], fs);
+    const pathStr = p => "/home/student" + (p.length ? "/" + p.join("/") : "");
+    const cwdStr = () => cwd.length ? "~/" + cwd.join("/") : "~";
+    function resolve(arg) {
+      if (!arg || arg === "~") return [];
+      const out = arg.startsWith("~/") ? [] : cwd.slice();
+      for (const part of arg.replace(/^~\//, "").split("/").filter(Boolean)) { if (part === "..") out.pop(); else if (part !== ".") out.push(part); }
+      return out;
+    }
+    function run(line) {
+      const m = line.trim().match(/^(\S+)\s*(.*)$/);
+      if (!m) return "";
+      const [, cmd, rest] = m, here = node(cwd);
+      switch (cmd) {
+        case "pwd": return pathStr(cwd);
+        case "ls": return Object.keys(here.kids).sort((a, b) => a.toLowerCase() < b.toLowerCase() ? -1 : 1).join("  ");
+        case "cd": { const p = resolve(rest.trim()); const n = node(p);
+          if (!n || n.type !== "dir") return `bash: cd: ${rest}: No such file or directory`; cwd = p; return ""; }
+        case "mkdir": if (!rest) return "mkdir: missing operand"; if (here.kids[rest]) return `mkdir: cannot create directory '${rest}': File exists`;
+          here.kids[rest] = dir(); return "";
+        case "touch": if (!rest) return "touch: missing file operand"; here.kids[rest] = here.kids[rest] || { type: "file", text: "" }; return "";
+        case "cat": { const n = here.kids[rest]; return n && n.type === "file" ? n.text : `cat: ${rest}: No such file or directory`; }
+        case "rm": if (here.kids[rest] && here.kids[rest].type === "file") { delete here.kids[rest]; return ""; } return `rm: cannot remove '${rest}': No such file or directory`;
+        case "echo": { const w = rest.match(/^(['"])(.*)\1\s*>\s*(\S+)$/);
+          if (w) { here.kids[w[3]] = { type: "file", text: w[2] }; return ""; }
+          return rest.replace(/^(['"])(.*)\1$/, "$2"); }
+        case "python3": { const n = here.kids[rest];
+          if (!n) return `python3: can't open file '${pathStr(cwd)}/${rest}': [Errno 2] No such file or directory`;
+          return [...n.text.matchAll(/print\((['"])(.*?)\1\)/g)].map(x => x[2]).join("\n"); }
+        case "code": return "(VS Code opens this folder)";
+        case "clear": $("term-log").innerHTML = ""; return null;
+        case "help": return "Try: pwd, ls, cd, mkdir, touch, echo 'text' > file, cat, python3 file.py, rm, clear";
+        default: return `${cmd}: command not found`;
+      }
+    }
+    function draw() {
+      $("term-cwd").textContent = cwdStr(); $("term-title").textContent = cwdStr();
+      const li = (name, n, path) => {
+        const here = path.join("/") === cwd.join("/");
+        if (n.type === "file") return `<li class="file">${esc(name)}</li>`;
+        const keys = Object.keys(n.kids).sort((a, b) => a.toLowerCase() < b.toLowerCase() ? -1 : 1);
+        const kids = keys.map(k => li(k, n.kids[k], path.concat(k))).join("");
+        const cls = path.length === 0 && keys.length > 4 ? "kids" : "";
+        return `<li><span class="${here ? "here" : ""}">${esc(name)}/</span>${here ? ' <span class="pin"><span aria-hidden="true">◀ </span>here</span>' : ""}${kids ? `<ul class="${cls}">${kids}</ul>` : ""}</li>`;
+      };
+      $("tree").innerHTML = `<ul>${li("home/student", fs, [])}</ul>`;
+    }
+    function enter(line) {
+      const before = cwdStr();
+      const res = run(line);
+      if (res === null) { draw(); return; }
+      const log = $("term-log");
+      log.insertAdjacentHTML("beforeend", prompt(before) + esc(line) + "\n" + (res ? esc(res) + "\n" : ""));
+      log.scrollTop = log.scrollHeight;
+      draw();
+    }
+    $("term-form").addEventListener("submit", e => { e.preventDefault(); const v = $("term-in").value; $("term-in").value = ""; if (v.trim()) enter(v); });
+    $("term-next").addEventListener("click", () => { if (next < demo.length) enter(demo[next++]); });
+    $("term-reset").addEventListener("click", reset);
+    $("term-in").addEventListener("keydown", e => e.stopPropagation());
+    reset();
+  })();
+
+  // ---------- CARLA client and server: messages on the wire ----------
+  (function () {
+    const wire = $("wire");
+    // c: a command from your script (left) to CARLA (right); d: data back
+    const msgs = [["apply_control(throttle=1.0)", "c"], ["tick()", "c"], ["speed: 12.4 m/s", "d"], ["apply_control(brake=1.0)", "c"], ["tick()", "c"], ["location: x, y, z", "d"]];
+    let busy = false;
+    $("wire-play").addEventListener("click", () => {
+      if (busy) return; busy = true;
+      msgs.forEach(([text, dir], i) => {
+        const c = document.createElement("span");
+        c.className = "chip"; c.textContent = text;
+        c.style.top = dir === "c" ? "42px" : "102px";
+        wire.appendChild(c);
+        const w = wire.clientWidth, cw = c.offsetWidth;
+        const from = dir === "c" ? -cw : w, to = dir === "c" ? w : -cw;
+        if (reduce) { c.style.opacity = 1; c.style.left = (w - cw) / 2 + "px"; setTimeout(() => c.remove(), 600 * (i + 1)); return; }
+        c.animate([{ left: from + "px", opacity: 0 }, { opacity: 1, offset: .15 }, { opacity: 1, offset: .85 }, { left: to + "px", opacity: 0 }],
+          { duration: 1400, delay: i * 550, easing: "linear", fill: "both" }).onfinish = () => c.remove();
+      });
+      setTimeout(() => { busy = false; }, msgs.length * 550 + 1400);
+    });
+  })();
+
+  // ---------- what is an API: an order goes to the kitchen and comes back ----------
+  (function () {
+    const lane = $("api-lane"), row = $("api-row"), map = $("api-map");
+    let busy = false;
+    $("api-play").addEventListener("click", () => {
+      if (busy) return;
+      const coded = map.classList.contains("shown") || !document.body.classList.contains("present");
+      const trips = coded ? [["world.spawn_actor(bp, spot)", "a car, placed"], ["car.get_velocity()", "12.4 m/s"]]
+                          : [["a car, please", "here is your car"], ["how fast is it?", "12.4 m/s"]];
+      const done = coded ? "Your script asked the API for spawn_actor and get_velocity. CARLA did the work; the API brought back the car and its speed, 12.4 m/s."
+                         : "The order went from you to the waiter to the kitchen, and each answer came back the same way.";
+      if (reduce) { $("api-said").textContent = done; return; }
+      busy = true; $("api-said").textContent = "";
+      const figs = row.querySelectorAll("figure"), cx = i => figs[i].offsetLeft + figs[i].offsetWidth / 2;
+      const legs = [];
+      trips.forEach(([q, a]) => legs.push([q, 0, 0, 1], [q, 0, 1, 2], [a, 1, 2, 1], [a, 1, 1, 0]));
+      const LEG = 900, GAP = 150;
+      legs.forEach(([text, back, i, j], n) => {
+        const c = document.createElement("span");
+        c.className = "chip" + (back ? " back" : ""); c.textContent = text;
+        c.style.top = (back ? 136 : 64) + "px"; lane.append(c);
+        const w = c.offsetWidth;
+        c.animate([{ left: cx(i) - w / 2 + "px", opacity: 0 }, { opacity: 1, offset: .12 }, { opacity: 1, offset: .88 }, { left: cx(j) - w / 2 + "px", opacity: 0 }],
+          { duration: LEG, delay: n * (LEG + GAP), easing: "ease-in-out", fill: "both" }).onfinish = () => c.remove();
+      });
+      setTimeout(() => { busy = false; $("api-said").textContent = done; }, legs.length * (LEG + GAP));
+    });
+  })();
+
+  // ---------- bug hunt: drawn bugs wander behind the errors while the slide is up ----------
+  (function () {
+    const field = $("bugfield"), slide = field.closest("section"), btn = $("bugstop"), NS = "http://www.w3.org/2000/svg";
+    // top views, head toward +x; legs in two tripods (la, lb) that step in turn
+    const legs = (y1, y2) => `<g class="la" stroke="#1F1A17" stroke-width="1.6" fill="none"><path d="M5,${y1} L9,${y2}"/><path d="M-1,${-y1} L-3,${-y2 - 2}"/><path d="M-6,${y1} L-10,${y2}"/></g>` +
+      `<g class="lb" stroke="#1F1A17" stroke-width="1.6" fill="none"><path d="M5,${-y1} L9,${-y2}"/><path d="M-1,${y1} L-3,${y2 + 2}"/><path d="M-6,${-y1} L-10,${-y2}"/></g>`;
+    const KINDS = [
+      legs(6, 13) + '<circle r="9.5" fill="#C62828"/><path d="M-9.5,0 H9" stroke="#1F1A17" stroke-width="1.2"/><circle cx="10" r="4.5" fill="#1F1A17"/>' +
+        '<g fill="#1F1A17"><circle cx="-3" cy="-4.5" r="1.8"/><circle cx="-3" cy="4.5" r="1.8"/><circle cx="3.5" cy="-5" r="1.5"/><circle cx="3.5" cy="5" r="1.5"/></g>',
+      legs(5, 13) + '<ellipse rx="11" ry="7" fill="#3E2723"/><path d="M-11,0 H6" stroke="#6D4C41" stroke-width="1"/><ellipse cx="12" rx="4" ry="3.5" fill="#3E2723"/>' +
+        '<path d="M15,-2 L20,-6 M15,2 L20,6" stroke="#3E2723" stroke-width="1.3"/>',
+      legs(2, 10) + '<g fill="#4E342E"><ellipse cx="-9" rx="6.5" ry="4.5"/><ellipse rx="3.5" ry="2.5"/><circle cx="6.5" r="3.6"/></g>' +
+        '<path d="M9,-2 L14,-7 M9,2 L14,7" stroke="#4E342E" stroke-width="1.2" fill="none"/>',
+    ];
+    const W = 1280, H = 720, R = 27, bugs = [];
+    for (let i = 0; i < 9; i++) {
+      const svg = document.createElementNS(NS, "svg");
+      svg.setAttribute("viewBox", "-20 -20 40 40");
+      svg.innerHTML = '<path class="splat" fill="#AFB42B" d="M-3,-14 C6,-16 8,-7 15,-8 C21,-7 17,2 14,6 C19,13 9,17 3,13 C-3,19 -12,15 -11,8 C-19,6 -18,-4 -11,-6 C-13,-13 -8,-14 -3,-14 Z"/>' +
+        '<g class="body">' + KINDS[i % KINDS.length] + '</g>';
+      field.append(svg);
+      bugs.push({ svg, x: 80 + Math.random() * (W - 160), y: 140 + Math.random() * (H - 220), a: Math.random() * 6.28,
+        v: 45 + Math.random() * 35, turn: 0, rest: 0 });
+    }
+    const draw = b => { b.svg.style.transform = `translate(${b.x - R}px, ${b.y - R}px) rotate(${b.a}rad)`; };
+    bugs.forEach(draw);
+    let running = false, stopped = false, last = 0;
+    function frame(now) {
+      if (!running) return;
+      const dt = Math.min(.05, (now - last) / 1000); last = now;
+      bugs.forEach(b => {
+        if (b.dead) return;
+        if (b.rest > 0) { b.rest -= dt; b.svg.classList.toggle("still", b.rest > 0); return; }
+        if (Math.random() < .004) { b.rest = .4 + Math.random() * 1.2; return; }
+        b.turn += (Math.random() - .5) * 6 * dt; b.turn *= .96; b.a += b.turn * dt * 3;
+        const m = 40;                                   // near an edge: steer back toward the middle
+        if (b.x < m || b.x > W - m || b.y < m || b.y > H - m) {
+          const want = Math.atan2(H / 2 - b.y, W / 2 - b.x);
+          b.a += Math.atan2(Math.sin(want - b.a), Math.cos(want - b.a)) * 4 * dt;
+        }
+        b.x += Math.cos(b.a) * b.v * dt; b.y += Math.sin(b.a) * b.v * dt;
+        draw(b);
+      });
+      requestAnimationFrame(frame);
+    }
+    function update() {
+      const go = slide.classList.contains("current") && document.body.classList.contains("present") && !stopped && !reduce;
+      field.classList.toggle("off", !go);
+      if (go && !running) { running = true; last = performance.now(); requestAnimationFrame(frame); }
+      if (!go) running = false;
+    }
+    btn.addEventListener("click", () => {
+      stopped = !stopped;
+      btn.textContent = stopped ? "Let the bugs loose" : "Stop the bugs";
+      btn.setAttribute("aria-pressed", String(stopped));
+      update();
+    });
+    // each answer that pops in squishes bugs: two for A, B and C; the rest for D
+    const SWATTER = '<svg class="swat" viewBox="0 0 64 106" aria-hidden="true"><rect x="4" y="4" width="56" height="56" rx="9" fill="#E53935" stroke="#B71C1C" stroke-width="3"/>' +
+      '<path d="M4,18 H60 M4,32 H60 M4,46 H60 M18,4 V60 M32,4 V60 M46,4 V60" stroke="#B71C1C" stroke-width="2" opacity=".55"/><rect x="29" y="60" width="6" height="44" rx="3" fill="#6D4C41"/></svg>';
+    const WORDS = ["squish!", "splat!", "got it!", "bug fixed!"];
+    function squish(b, k, animate) {
+      if (b.dead) return;
+      b.dead = true; b.svg.classList.add("still");
+      if (!animate) { b.svg.classList.add("squished"); return; }
+      field.insertAdjacentHTML("beforeend", SWATTER);
+      const sw = field.lastElementChild;
+      sw.style.left = b.x - 32 + "px"; sw.style.top = b.y - 32 + "px"; sw.style.animationDelay = k * .25 + "s";
+      setTimeout(() => {
+        b.svg.classList.add("squished");
+        const w = document.createElement("span");
+        w.className = "splat-word"; w.textContent = WORDS[Math.floor(Math.random() * WORDS.length)];
+        w.style.left = b.x + 18 + "px"; w.style.top = b.y - 44 + "px"; field.append(w);
+        setTimeout(() => w.remove(), 950);
+      }, 260 + k * 250);
+      setTimeout(() => sw.remove(), 750 + k * 250);
+    }
+    function revive(b) { b.dead = false; b.rest = 0; b.svg.classList.remove("squished", "still"); }
+    slide.querySelectorAll(".ans").forEach((ans, i, all) => {
+      const mine = i < all.length - 1 ? bugs.slice(2 * i, 2 * i + 2) : bugs.slice(2 * i);
+      new MutationObserver(() => {
+        const live = slide.classList.contains("current") && document.body.classList.contains("present") && !reduce;
+        if (ans.classList.contains("shown")) mine.forEach((b, k) => squish(b, k, live)); else mine.forEach(revive);
+      }).observe(ans, { attributes: true, attributeFilter: ["class"] });
+    });
+    new MutationObserver(update).observe(slide, { attributes: true, attributeFilter: ["class"] });
+    new MutationObserver(update).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    update();
+  })();
+
+  // ---------- where we are going: ROS 2 nodes brake a car (a drawing with round numbers, not a CARLA run) ----------
+  (function () {
+    const NS = "http://www.w3.org/2000/svg", svg = $("aeb-svg"), P = id => svg.getElementById(id), dots = P("aeb-dots");
+    const S = 10.44, F0 = 150, LEAD = 45, V0 = 15, A = 8, TTC = 1.4, LAT = 0.1, SLOW = 0.6, TRAVEL = 700;
+    function draw(x, v, brake) {
+      const f = F0 + x * S, lr = F0 + LEAD * S;
+      P("aeb-ego").setAttribute("x", f - 120);
+      P("aeb-beam").setAttribute("points", `${f},401 ${lr},389 ${lr},413`);
+      P("aeb-gapline").setAttribute("d", `M${f},360 V370 H${lr} V360`);
+      P("aeb-gaptxt").setAttribute("x", (f + lr) / 2);
+      P("aeb-gaptxt").textContent = `gap ${(LEAD - x).toFixed(1)} m`;
+      $("aeb-v").textContent = v.toFixed(1);
+      P("aeb-state").textContent = brake ? "decides: BRAKE" : "decides: drive";
+      P("aeb-state").setAttribute("fill", brake ? "#B3261E" : "#2E7D32");
+      P("aeb-node").setAttribute("stroke", brake ? "#B3261E" : "#2B5B84");
+    }
+    function step(st, dt) {   // one time step of the drawing's physics
+      if (st.trig === null && st.v > 0 && (LEAD - st.x) / st.v < TTC) st.trig = st.t;
+      const braking = st.trig !== null && st.t >= st.trig + LAT;
+      if (st.v > 0) { if (braking) st.v = Math.max(0, st.v - A * dt); st.x += st.v * dt; }
+      st.t += dt;
+    }
+    const said = st => `aeb sent full brake when the gap divided by the speed fell below ${TTC} s. The car stopped ${(LEAD - st.x).toFixed(1)} m short of the stopped car.`;
+    let running = false;
+    $("aeb-play").addEventListener("click", () => {
+      if (running) return;
+      const st = { x: 0, v: V0, t: 0, trig: null };
+      $("aeb-said").textContent = "";
+      if (reduce) { while (st.v > 0) step(st, .005); draw(st.x, st.v, true); $("aeb-said").textContent = said(st); return; }
+      running = true;
+      const live = []; let last = performance.now(), next = 0, stopAt = null;
+      const dot = (path, color, now) => {
+        const c = document.createElementNS(NS, "circle");
+        c.setAttribute("r", 7); c.setAttribute("fill", color); c.setAttribute("stroke", "#fff"); c.setAttribute("stroke-width", 2);
+        dots.append(c); live.push({ c, path: P(path), born: now });
+      };
+      (function frame(now) {
+        step(st, Math.min(.05, (now - last) / 1000) * SLOW); last = now;
+        draw(st.x, st.v, st.trig !== null);
+        if (stopAt === null && now >= next) {
+          dot("aeb-p-radar", "#1F6FB2", now); dot("aeb-p-log", "#1F6FB2", now);
+          dot("aeb-p-cmd", st.trig !== null ? "#B3261E" : "#2E7D32", now); next = now + 250;
+        }
+        if (st.v === 0 && stopAt === null) stopAt = now;
+        for (let i = live.length - 1; i >= 0; i--) {
+          const d = live[i], u = (now - d.born) / TRAVEL;
+          if (u >= 1) { d.c.remove(); live.splice(i, 1); continue; }
+          const p = d.path.getPointAtLength(u * d.path.getTotalLength());
+          d.c.setAttribute("cx", p.x); d.c.setAttribute("cy", p.y);
+        }
+        if (stopAt !== null && now - stopAt > 1200 && !live.length) { running = false; $("aeb-said").textContent = said(st); return; }
+        requestAnimationFrame(frame);
+      })(last);
+    });
+  })();
+
+  // ---------- videos: open in a dialog, play from the start, pause on close ----------
+  // Where the MP4s are served from. They are not committed. First the local videos/ folder (the podium copy, works
+  // offline); if a file is not there, the course's public GitHub release "lecture-1b-videos".
+  const VIDEO_BASES = ["videos/", "https://github.com/AD-Assurance-Lab/vehicle-dynamics/releases/download/lecture-1b-videos/"];
+  document.querySelectorAll("dialog.vid").forEach(d => {
+    const v = d.querySelector("video");
+    d.addEventListener("keydown", e => { if (e.key !== "Escape") e.stopPropagation(); });   // keys stay with the video
+    d.addEventListener("close", () => v.pause());
+    d.addEventListener("click", e => { if (e.target === d) d.close(); });
+    d.querySelector(".vid-close").addEventListener("click", () => d.close());
+    v.addEventListener("error", () => {
+      const k = +(v.dataset.base || 0) + 1;
+      if (k < VIDEO_BASES.length) { v.dataset.base = k; v.src = VIDEO_BASES[k] + v.dataset.file; if (d.open) v.play().catch(() => {}); return; }
+      const p = d.querySelector(".vid-head p"); p.className = "err"; p.textContent = "Video not found: " + v.dataset.file;
+    });
+  });
+  document.querySelectorAll("button.watch").forEach(b => b.addEventListener("click", () => {
+    const d = $(b.dataset.video), v = d.querySelector("video");
+    if (!v.getAttribute("src")) v.src = VIDEO_BASES[+(v.dataset.base || 0)] + v.dataset.file;
+    d.showModal();
+    v.currentTime = 0;
+    v.play().catch(() => {});
+  }));
+})();
+</script>
+</body>
+</html>
